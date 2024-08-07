@@ -392,7 +392,7 @@ class SensorDataProcessor:
                 esp_gear_list = list(esp_gear_raw.split(","))
                 try:
                     esp_gear_dict = {esp_gear_dictkeys[i]: float(esp_gear_list[i]) for i in range(len(esp_gear_dictkeys))}
-                    if esp_gear_dict["bg"] < 91.0:
+                    if esp_gear_dict["bg"] < 14.0:
                         self.espgear = None
                 except IndexError: # Error likely due to battery analog reading flickering
                     esp_gear_list.append('0')

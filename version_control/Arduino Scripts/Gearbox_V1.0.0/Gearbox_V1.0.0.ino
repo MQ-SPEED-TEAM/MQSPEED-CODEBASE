@@ -40,7 +40,7 @@ float DISTANCE=117;           //Number of steps per gear change for 1-4
 int UPPER_DISTANCE = 99;    //Number of steps per gear change for 4-6
 int OVERSHOOT=30;           //Overshoots the gear to move to the next one
 
-RunningAverage battery_voltage(1000);
+RunningAverage battery_voltage(100);
 
 /*////////////////////////////////////////////////////////////////////////////////////////////////
 VARIABLES
@@ -155,21 +155,22 @@ float map_f(float x, float in_min, float in_max, float out_min, float out_max) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 void loop() {
+//  
+//  BATTERY_PERCENTAGE = (analogRead(BATTERY_PIN) -890) * 0.83;
+//  if (BATTERY_PERCENTAGE>100){ BATTERY_PERCENTAGE = 100;}
+//  if (BATTERY_PERCENTAGE < 0){ BATTERY_PERCENTAGE = 0;}
+//
+//  if (BATTERY_PERCENTAGE<10 && CHECKED==0){
+//    CHECK_TIME = millis();
+//    CHECKED = 1;
+//  }
   
-  BATTERY_PERCENTAGE = (analogRead(BATTERY_PIN) -890) * 0.83;
-  if (BATTERY_PERCENTAGE>100){ BATTERY_PERCENTAGE = 100;}
-  if (BATTERY_PERCENTAGE < 0){ BATTERY_PERCENTAGE = 0;}
-
-  if (BATTERY_PERCENTAGE<10 && CHECKED==0){
-    CHECK_TIME = millis();
-    CHECKED = 1;
-  }
-  battery_voltage.addValue(BATTERY_PERCENTAGE);
+  battery_voltage.addValue(analogRead(BATTERY_PIN));
   float VOLTAGE_BATTERY  = battery_voltage.getAverage();
-    VOLTAGE_BATTERY = map_f(VOLTAGE_BATTERY, 0.0, 4095.0, 0.0, 3.3);
-    VOLTAGE_BATTERY = (VOLTAGE_BATTERY*(12.2/2.2)) + 0.535;
+    VOLTAGE_BATTERY = map_f(VOLTAGE_BATTERY, 0.0, 1024.0, 0.0, 3.3) + 0.7;
+    VOLTAGE_BATTERY = (VOLTAGE_BATTERY*(4));
 
-  if(analogRead(BATTERY_PIN)<900 && CHECKED == 1 && millis() - CHECK_TIME > 2000){
+  if(VOLTAGE_BATTERY<14.4 && CHECKED == 1 && millis() - CHECK_TIME > 2000){
     digitalWrite(EN, HIGH);
     sleep_enable();
     sleep_cpu();
@@ -275,7 +276,7 @@ if(millis()-write_time>=5){
   Serial.print(","); 
   Serial.print(gear); 
   Serial.print(","); 
-  Serial.print(analogRead(BATTERY_PIN));
+  Serial.print(VOLTAGE_BATTERY);
   Serial.print("\n");
   Serial.flush();
 //  Serial.println(millis()-button_time);
