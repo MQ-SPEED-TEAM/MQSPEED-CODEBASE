@@ -68,7 +68,7 @@ class SensorDataProcessor:
         start_byte_found = False
         
         
-        if port == None or port == 0:
+        if port == None or port == 0 or port == "None":
             return ("port unavailable")
         if port != None:
             if not port.is_open:
@@ -80,6 +80,7 @@ class SensorDataProcessor:
                 try:
                     byte_read = port.read()
                 except serial.serialutil.SerialException:
+                    print("SerialException, port unavailable")
                     return ("port unavailable")
                 if byte_read in possible_start_bytes:
                     start_byte_found = True
@@ -380,16 +381,19 @@ class SensorDataProcessor:
                 esp_bike_raw = esp_bike_raw[2:]
                 esp_bike_list = list(esp_bike_raw.split(","))
                 esp_bike_dict = {esp_bike_dictkeys[i]: float(esp_bike_list[i]) for i in range(len(esp_bike_dictkeys))}
+            
+
             esp_gear_raw =  ''.join(self.bytestream_read(self.espgear))
-            
-            
             if esp_gear_raw == "port unavailable":
                 esp_gear_dict =  {"gear": "unavailable"}
+
             else:
                 esp_gear_raw = esp_gear_raw[2:]
                 esp_gear_list = list(esp_gear_raw.split(","))
                 try:
                     esp_gear_dict = {esp_gear_dictkeys[i]: float(esp_gear_list[i]) for i in range(len(esp_gear_dictkeys))}
+                    if esp_gear_dict["bg"] < 91.0:
+                        self.espgear = None
                 except IndexError: # Error likely due to battery analog reading flickering
                     esp_gear_list.append('0')
                     esp_gear_dict = {esp_gear_dictkeys[i]: float(esp_gear_list[i]) for i in range(len(esp_gear_dictkeys))}
@@ -509,14 +513,14 @@ class SensorDataProcessor:
 
 ### DEBUGGING BOILER PLATE DONT MIND
 # sensor_processor = SensorDataProcessor()
-# bike_esp = serial.Serial('/dev/ttyUSB0', 115200, timeout=1, xonxoff=False, rtscts=True, dsrdtr=True)
-
+# # bike_esp = serial.Serial('/dev/ttyUSB0', 115200, timeout=1, xonxoff=False, rtscts=True, dsrdtr=True)
+# 
 # sensor_processor.check_port_complete(sensor_processor.auto_port())
-# sensor_processor.auto_port()
-
-#Benchmark test functions
-
-##
+# # sensor_processor.auto_port()
+# 
+# #Benchmark test functions
+# 
+# ##
 # count = 0
 # while count <= 1000:
 #     stopwatch_start = time.perf_counter_ns()
