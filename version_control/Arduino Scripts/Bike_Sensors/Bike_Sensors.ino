@@ -11,9 +11,6 @@
 #define RXD2 16
 #define TXD2 17
 
-String pi_data;
-String command;
-
 /////////////////////////STEERING ANGLE///////////////////////////////////////////////////
 
 AS5600 as5600; 
@@ -189,75 +186,6 @@ void IRAM_ATTR gear_shaft(){
   prev_shaft = now;
   debounce_shaft_trigger=1;
 }
-
-// priority index: center = 1, left = 2, right = 3, all wheels broken = 4
-// not yet implemented, to be put in after melbourne
-//ints_struct compare_values(float left_wheel, float right_wheel, float center_wheel, float shaft, float crank, int priority_wheel){
-  int error_margin = 10;
-  int left_status;
-  int right_status;
-  int center_status;
-  int shaft_status;
-  int crank_status;
-  float priority_rpm;
-  int new_priority_wheel;
-
-  // choose wheel to become leader
-//  if(priority_wheel == 1){
-//    priority_rpm = center_wheel;
-//  }
-//  if(priority_wheel == 2){
-//    priority_rpm = left_wheel;
-//  }
-//  if(priority_wheel == 3){
-//    priority_rpm = right_wheel;
-//  }
-  
- // compare values and determine, 1 is error and 0 is working
-
-//  if(left_wheel>(priority_rpm + error_margin) || (priority_rpm - error_margin) < left_wheel){
-//    left_status = 1;
-//  } else{
-//    left_status = 0;
-//  }
-//
-//  if(right_wheel>(priority_rpm + error_margin) || (priority_rpm - error_margin) < right_wheel){
-//    right_status = 1;
-//  } else{
-//    right_status = 0;
-//  }
-//
-//  if(center_wheel>(priority_rpm + error_margin) || (priority_rpm - error_margin) < center_wheel){
-//    center_status = 1;
-//  } else{
-//    center_status = 0;
-//  }
-//
-//  if(shaft>((priority_rpm*some_constant_from_gear_ratio) + error_margin) || (priority_rpm*some_constant_from_gear_ratio - error_margin) < shaft){
-//    shaft_status = 1;
-//  } else{
-//    shaft_status = 0;
-//
-//  }
-//  if(crank>(priority_rpm*some_constant_from_gear_ratio + error_margin) || (priority_rpm*some_constant_from_gear_ratio - error_margin) < crank){
-//    crank_status = 1;
-//  } else{
-//    crank_status = 0;
-//  }
-//
-//  if(left_status == 1 && right_status == 1 && shaft == 1 && crank == 1){
-//    new_priority_wheel = 2;
-//  } else if(center_status == 1 && right_status == 1 && shaft == 1 && crank == 1){
-//    new_priority_wheel = 3;
-//  } else if(center_status == 1 && left_status == 1 && shaft == 1 && crank == 1){
-//    new_priority_wheel = 4;
-//  } else{
-//    new_priority_wheel = 1;
-//  }
-//
-//  return {left_status, right_status, center_status, shaft_status, crank_status, new_priority_wheel};
-//}
-
 
 ////////////////////////////////////////////////////SETUP//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -447,15 +375,6 @@ int reading_crank=digitalRead(hall_pin5);
     }
   }
   lastButtonState_crank=reading_crank;
-     
-    
-  
- // RPM_L = (60000000.00/(time_l*Magnet_Number));          // RPM left
- // RPM_R = (60000000.00/(time_r*Magnet_Number));         // RPM Right
- // RPM_C = (60000000.00/(time_c*Magnet_Number));        // RPM Centre
- // RPM_CRANK = (60000000.00/(time_cr*5));  //RPM Crank
-
-  
   
   if(time_shaft==999999999){RPM_SHAFT=0;} //RPM Shaft
   else{RPM_SHAFT = (60000000.00/(time_shaft*Magnet_Number));}
@@ -522,16 +441,6 @@ int reading_crank=digitalRead(hall_pin5);
         time_last_crank=millis();
    }
   
-  ///////////////////////////////////Adds value to running average/////////////////////////////////////////////////////////////////
-  
-//  RPM_L_RA.addValue(RPM_L);             // Adds value to running average wheel left
-//  RPM_R_RA.addValue(RPM_R);            // Adds value to running average wheel right
-//  RPM_C_RA.addValue(RPM_C);           // Adds value to running average wheel centre
-//  RPM_CRANK_RA.addValue(RPM_CRANK);  // Adds value to runing average wheel crank
-//  RPM_SHAFT_RA.addValue(RPM_SHAFT); 
-
-  //print_S = RPM_SHAFT_RA.getAverage();
- 
 
 
   //////////////////////////////////////////////Print to screen///////////////////////////////////////////////////////////////////////////

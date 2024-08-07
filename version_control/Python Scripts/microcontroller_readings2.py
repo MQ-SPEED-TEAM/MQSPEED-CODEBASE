@@ -499,7 +499,15 @@ class SensorDataProcessor:
 
 
 
-### debugging boiler plate dont mind
+
+
+
+
+
+
+
+
+### DEBUGGING BOILER PLATE DONT MIND
 # sensor_processor = SensorDataProcessor()
 # bike_esp = serial.Serial('/dev/ttyUSB0', 115200, timeout=1, xonxoff=False, rtscts=True, dsrdtr=True)
 

@@ -21,20 +21,15 @@ f=open('/home/pi/Desktop/Saves/Test_' + str(datetime.now().strftime('%Y_%m_%d_%H
 writer = csv.writer(f)
 
 
-
 #////////////////////////////VARIABLES/////////////////////////////////////
 #//////////////////////////////////////////////////////////////////////////////
 
-t = 1800
 temp_speed = 0
 max_speed = 0
 distance = 8000
-cadance = 0
-timeout=0
 line_count = 0
 printed_times=0
 auto_port_count = 0
-print_time = 0
 time_start=0
 file_open = True
 debounce = True
@@ -42,13 +37,11 @@ millis_start = 0
 ports_incomplete = True
 transmit_count = 0
 calculated_times=0
-calculation_time=0
 distance_calculation_interval=15 #in milliseconds
 distance_traveled=0
 time_start =float(time.perf_counter())*1000
 time_last=float(time.perf_counter())*1000
 time_last_ts=float(time.perf_counter())*1000
-old_value = 0
 window_size = 10
 ts_list = []
 display_ts = 0
@@ -60,8 +53,8 @@ display_ts = 0
 
 camera = PiCamera()
 camera.rotation = 0
-camera.contrast = 75 #// also causes freezing
-camera.image_effect = "saturation" #// causes freezing
+camera.contrast = 75 
+camera.image_effect = "saturation" 
 
 # setup function
 sensor_data_processor = SensorDataProcessor()
@@ -156,10 +149,7 @@ while True:
                     ports_incomplete = False
                     port_status = "devices all connected"
                     
-                    
                 sensor_data_processor.dt = distance_traveled
-                
-                
                 
             #//////////////////////MODES FOR THE HUD//////////////////////////////////////////////////
             #////////////////////////////////////////////////////////////////////////////////////////
@@ -177,9 +167,11 @@ while True:
         #/////DEBOUNCE IN CASE/////#
         time.sleep(1)
         debounce = False
+        
+    
+    if GPIO.input(7) == GPIO.HIGH and powerstate == True and debounce == False:
         #/////////////////////////SAVING AND CLOSING FILES/////////////////////////////////
         #/////////////////////////////////////////////////////////////////////////////////
-    if GPIO.input(7) == GPIO.HIGH and powerstate == True and debounce == False:
         time.sleep(2)
         end_time = time.time()
         f.close()
