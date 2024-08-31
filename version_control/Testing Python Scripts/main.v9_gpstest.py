@@ -7,7 +7,7 @@ import time
 from datetime import datetime
 import datetime as dt
 import csv
-from microcontroller_readings import SensorDataProcessor
+from microcontroller_readings_gpstest import SensorDataProcessor
 import os
 
 #///////////////////////////////////SETUP////////////////////////////////////////////

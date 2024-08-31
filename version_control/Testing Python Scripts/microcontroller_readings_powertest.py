@@ -40,6 +40,7 @@ class SensorDataProcessor:
         self.gs = 0
         self.al = 0
         self.sn = 0
+        self.pr = 0
         
         
         self.df = 0
@@ -51,7 +52,7 @@ class SensorDataProcessor:
                               "s","ts","sa","g","bg","ax",
                               "ay","az","vx",
                               "vy","vz","t","h",
-                              "p","bp","ba","la","lo","gs","al","sn","dt"]
+                              "p","bp","ba","la","lo","gs","al","sn","dt","pr"]
         # Initialize port instances as class attribute
         self.esphatch = 0
         self.espbike = 0
@@ -371,7 +372,7 @@ class SensorDataProcessor:
         esp_bike_dictkeys = ["c","l","r","s","cr","sa"]
         esp_gear_dictkeys = ["g","bg"]
         esp_hatch_dictkeys = ["ax","ay","az","vx","vy","vz","t","h", "p","bp","ba","la","lo","gs","al","sn"]
-        cal_data_dict = {"ts":self.ts, "dt":self.dt}
+        cal_data_dict = {"ts":self.ts, "dt":self.dt, "pr":self.pr}
         
         # Match list of dict keys to serial port list of data points
         while True:
@@ -563,7 +564,6 @@ class SensorDataProcessor:
 
 # # while True:
 #     sensor_processor.raw_read()
-
 
 
 
