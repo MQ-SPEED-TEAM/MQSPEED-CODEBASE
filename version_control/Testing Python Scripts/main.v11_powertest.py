@@ -10,24 +10,7 @@ import csv
 from microcontroller_readings_powertest import SensorDataProcessor
 import os
 from multiprocessing import Process,Pipe,set_start_method
-import usb.core
-# dev = usb.core.find(idVendor=0x0fcf,idProduct=0x1009)
-# i = dev[0].interfaces()[6].bInterfaceNumber
-# if dev.is_kernel_driver_active(i):
-#     try:
-#         dev.detach_kernel_driver(i)
-#     except usb.core.USBError as e:
-#         sys.exit("Could not detatch kernel driver from interface({0}): {1}".format(i, str(e)))
-# from power_loop_test import power_loop
-# from openant.easy.node import Node
-# from openant.devices import ANTPLUS_NETWORK_KEY
-# from openant.devices.power_meter import PowerMeter, PowerData
 import power_meter as pmr
-# import sys
-# sys.path.insert(1, '/home/pi/MQSPEED-CODEBASE/version_control/Testing Python Scripts/openant/examples')
-# import multi_dev_fe_power_meter as pmr
-# from openant.devices import multi_dev_fe_power_meter as pmr
-# import openant as op
 
 
 def system():
@@ -47,11 +30,6 @@ def system():
     power_process = Process(target=pmr.main, args=(conn2,))
     power_process.start()
     
-    
-    
-
-
-
     #////////////////////////////VARIABLES/////////////////////////////////////
     #//////////////////////////////////////////////////////////////////////////////
 
@@ -123,7 +101,9 @@ def system():
         #total speed in kph
         sensor_data_processor.ts = round((float(sensor_data_processor.c)*1.47655)*(60/1000),5)
         if conn1.poll():
-            sensor_data_processor.pw = conn1.recv()
+            pedals_data = conn1.recv()
+            sensor_data_processor.pw = pedals_data[0]
+            sensor_data_processor.cd = pedals_data[1]
         
         #moving average of total speed
         if len(ts_list) < window_size:

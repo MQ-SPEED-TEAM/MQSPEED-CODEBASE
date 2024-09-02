@@ -7,7 +7,8 @@ import csv
 from datetime import datetime
 
 
-
+test_data = {'c': 0, 'l': 0, 'r': 0, 'cr': 0, 's': 0, 'ts': 0, 'sa': 0, 'g': 1, 'bg': 266, 'ax': -1.84, 'ay': 6.27, 'az': -7.59, 'vx': -20.55, 'vy': 4.65, 'vz': -97.05, 't': 24.92, 'p': 102189.0, 'h': 53.03, 'bp': 15.26, 'ba': 0.54, 'data': 0}
+x = 5
 class SensorDataProcessor:
     """Takes data from all the sensors and packages them for either data logging, 
     screen display, or to send back to microcontrollers"""
@@ -37,13 +38,6 @@ class SensorDataProcessor:
         self.dt = 0
         self.la = 0
         self.lo = 0
-        self.gs = 0
-        self.al = 0
-        self.sn = 0
-        self.pr = 0
-        self.cd = 0
-        
-        
         self.df = 0
         self.last_log = 0
         self.active_ports = 0
@@ -53,7 +47,7 @@ class SensorDataProcessor:
                               "s","ts","sa","g","bg","ax",
                               "ay","az","vx",
                               "vy","vz","t","h",
-                              "p","bp","ba","la","lo","gs","al","sn","dt","pr", "cd"]
+                              "p","bp","ba","la","lo","df","dt"]
         # Initialize port instances as class attribute
         self.esphatch = 0
         self.espbike = 0
@@ -354,7 +348,7 @@ class SensorDataProcessor:
         self.espgear = serial.Serial('/dev/ttyUSB0', 115200, timeout=1, xonxoff=False, rtscts=True, dsrdtr=True)
         array_tmp = []
         while True:
-            byte_read = self.esphatch.read()  # Read bytes from serial port
+            byte_read = self.espgear.read()  # Read bytes from serial port
             if byte_read: #if not empty
                 byte_char = byte_read.decode()  # Decode bytes to string
                 array_tmp.append(byte_char) # Add decoded byte to temporary array
@@ -362,7 +356,7 @@ class SensorDataProcessor:
                     print(''.join(array_tmp))  # Print the received line                       
                     if array_tmp[-1] != "\n" or len(array_tmp) < 24 :
                         self.defects += 1
-                    self.esphatch.reset_input_buffer()
+                    self.espgear.reset_input_buffer()
                     array_tmp = []
                     break       
 
@@ -372,8 +366,9 @@ class SensorDataProcessor:
         # Declare list of dict keys
         esp_bike_dictkeys = ["c","l","r","s","cr","sa"]
         esp_gear_dictkeys = ["g","bg"]
-        esp_hatch_dictkeys = ["ax","ay","az","vx","vy","vz","t","h", "p","bp","ba","la","lo","gs","al","sn"]
-        cal_data_dict = {"ts":self.ts, "dt":self.dt, "pr":self.pr, "cd":self.cd}
+        esp_hatch_dictkeys = ["ax","ay","az","vx","vy","vz","t","h",
+                              "p","bp","ba"]
+        cal_data_dict = {"ts":self.ts, "dt":self.dt}
         
         # Match list of dict keys to serial port list of data points
         while True:
@@ -413,15 +408,7 @@ class SensorDataProcessor:
             else:
                 esp_hatch_raw = esp_hatch_raw[2:]
                 esp_hatch_list = list(esp_hatch_raw.split(","))
-#                 esp_hatch_dict = {esp_hatch_dictkeys[i]: float(esp_hatch_list[i]) for i in range(len(esp_hatch_dictkeys))}
-                esp_hatch_dict = {}
-#                 print(esp_hatch_list)
-                for i in range(len(esp_hatch_dictkeys)):
-                    try:
-                        esp_hatch_dict[esp_hatch_dictkeys[i]] = float(esp_hatch_list[i])
-                    except:
-                        esp_hatch_dict[esp_hatch_dictkeys[i]] = (esp_hatch_list[i])
-                    
+                esp_hatch_dict = {esp_hatch_dictkeys[i]: float(esp_hatch_list[i]) for i in range(len(esp_hatch_dictkeys))}
             
             
             # Combine dictionaries
@@ -469,12 +456,13 @@ class SensorDataProcessor:
         current_data.pop("espgear")
         current_data.pop("defects")
         current_data.pop("last_log")
-#         current_data.pop("la")
-#         current_data.pop("lo")
+        current_data.pop("la")
+        current_data.pop("lo")
         current_data.pop("df")
         current_data.pop("active_ports")
         current_data.pop("expected_ports")
-            
+        
+#         print(current_data.values())
         return list(current_data.values())
     
     def transmit(self):
@@ -487,8 +475,8 @@ class SensorDataProcessor:
         current_data.pop("espgear")
         current_data.pop("defects")
         current_data.pop("last_log")
-#         current_data.pop("la")
-#         current_data.pop("lo")
+        current_data.pop("la")
+        current_data.pop("lo")
         current_data.pop("df")
         current_data.pop("active_ports")
         current_data.pop("expected_ports")
@@ -496,36 +484,25 @@ class SensorDataProcessor:
         # Format dictionary into byte stream
         current_data_line = str(list(current_data.values()))[1:-1]
         current_data_list = list(current_data.values())
-        
-        
-#         current_data_list = []
-#                 for i in current_raw_data_list:
-#                     try:
-#                         current_data_list.append(float(i))
-#                     except:
-#                         current_data_list.append(float(i))
-#         
-#         try:
-#             current_data_list = [float(i) for i in current_data_list]
-#         except ValueError: # Again likely to gearbox data flickering
-#             current_data_list = [i for i in current_data_list if i != '']
-#             current_data_list = [float(i) for i in current_data_list]
-#             print("gearbox gave too much data")
-            
-            
-            
+        try:
+            current_data_list = [float(i) for i in current_data_list]
+        except ValueError: # Again likely to gearbox data flickering
+            current_data_list = [i for i in current_data_list if i != '']
+            current_data_list = [float(i) for i in current_data_list]
+            print("gearbox gave too much data")
         current_data_line = str(current_data_list)[1:-1]
         current_data_string = f"{current_data_line}\n"
         current_data_bytes = str.encode(current_data_string)
         
         try:
-            # UNCOMMENT OUT ONCE TRANSCIEVER WORKS
+            print(f"sending data")
             self.esphatch.write(current_data_bytes)
             print(f"data sent: {current_data_line}")
         except AttributeError:
             print(f"data packet not sent: {current_data_line}")
         except OSError:
             print(f"Hatch ESP disconnected, transmit error")
+        return current_data_string
 
 
 
@@ -538,25 +515,27 @@ class SensorDataProcessor:
 
 
 ### DEBUGGING BOILER PLATE DONT MIND
-# sensor_processor = SensorDataProcessor()
-# # # # bike_esp = serial.Serial('/dev/ttyUSB0', 115200, timeout=1, xonxoff=False, rtscts=True, dsrdtr=True)
-# # 
-# # sensor_processor.check_port_complete(sensor_processor.auto_port())
-# sensor_processor.auto_port()
-# # # 
-# # # #Benchmark test functions
-# # # 
-# # # ##
-# count = 0
-# while count <= 100:
-#     stopwatch_start = time.perf_counter_ns()
-# #     print(sensor_processor.process())
-#     print(sensor_processor.raw_read())
-#     stopwatch_end = time.perf_counter_ns()
-#     print(stopwatch_end - stopwatch_start)
-#     count += 1
-# print("reading defects:")
-# print(sensor_processor.defects)
+sensor_processor = SensorDataProcessor()
+# # bike_esp = serial.Serial('/dev/ttyUSB0', 115200, timeout=1, xonxoff=False, rtscts=True, dsrdtr=True)
+# 
+# sensor_processor.check_port_complete(sensor_processor.auto_port())
+# # sensor_processor.auto_port()
+# 
+# #Benchmark test functions
+# 
+# ##
+count = 0
+while count <= 1000:
+    stopwatch_start = time.perf_counter_ns()
+    sensor_processor.raw_read()
+    sensor_processor.bytestream_read(bike_esp)
+#     print(sensor_processor.process())
+    print(sensor_processor.transmit())
+    stopwatch_end = time.perf_counter_ns()
+    print(stopwatch_end - stopwatch_start)
+    count += 1
+print("reading defects:")
+print(sensor_processor.defects)
 ##
 
 # writer.writerow([sensor_processor.defects])
@@ -565,8 +544,6 @@ class SensorDataProcessor:
 
 # # while True:
 #     sensor_processor.raw_read()
-
-
 
 
 

@@ -29,7 +29,7 @@ def main(connection = None):
         if isinstance(data, PowerData):
 #             print(f"PowerMeter {page_name} ({page}) update: {data}")
             try:
-                connection.send(data.average_power)
+                connection.send([data.average_power,data.cadence])
             except:
                 pass
 
@@ -40,8 +40,9 @@ def main(connection = None):
     try:
         print(f"Starting {devices}, press Ctrl-C to finish")
         node.start()
-    except KeyboardInterrupt:
-        print("Closing ANT+ device...")
+# Uncomment to use keyboard interrupt to stop program when running pedal_readings as main. DO NOT uncomment when using as helper function with main.
+#     except KeyboardInterrupt:
+#         print("Closing ANT+ device...")
     finally:
         for d in devices:
             d.close_channel()
@@ -50,3 +51,4 @@ def main(connection = None):
 
 if __name__ == "__main__":
     main()
+

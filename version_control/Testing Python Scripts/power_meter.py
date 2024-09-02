@@ -29,7 +29,7 @@ def main(connection = None):
         if isinstance(data, PowerData):
 #             print(f"PowerMeter {page_name} ({page}) update: {data}")
             try:
-                connection.send(data.average_power)
+                connection.send([data.average_power,data.cadence])
             except:
                 pass
 
