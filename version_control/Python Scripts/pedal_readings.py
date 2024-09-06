@@ -11,7 +11,7 @@ from openant.devices.power_meter import PowerMeter, PowerData
 
 
 
-def main(connection = None):
+def ant_main(connection = None):
     import logging
 
     logging.basicConfig(level=logging.INFO)

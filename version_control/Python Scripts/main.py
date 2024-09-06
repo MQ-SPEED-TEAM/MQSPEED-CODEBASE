@@ -24,10 +24,13 @@ def system():
     f=open('/home/pi/Desktop/Saves/Test_' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.csv', 'w')
     writer = csv.writer(f)
     
+    
+    
     # start power multiprocess
     conn1, conn2 = Pipe() #conn1 is reading side and conn2 is writing side
     set_start_method("spawn")
-    power_process = Process(target=prd.main, args=(conn2,))
+
+    power_process = Process(target=prd.ant_main, args=(conn2,))
     power_process.start()
     
     #////////////////////////////VARIABLES/////////////////////////////////////
@@ -68,8 +71,8 @@ def system():
 
     camera = PiCamera()
     camera.rotation = 0
-    camera.contrast = 75 #// also causes freezing
-    camera.image_effect = "saturation" #// causes freezing
+    camera.contrast = 75
+    camera.image_effect = "saturation"
 
     # setup function
     sensor_data_processor = SensorDataProcessor()
@@ -178,7 +181,7 @@ def system():
                 #//////////////////////MODES FOR THE HUD//////////////////////////////////////////////////
                 #////////////////////////////////////////////////////////////////////////////////////////
                 #speed = round(float(sensor_data_processor.c)*0.000508,1)
-                standard_overlay = 'Cadance: ' +str(sensor_data_processor.cr) + '     ' +    ' KPH: ' +str(display_ts) + '     '+ 'Gear: '+ str(round(sensor_data_processor.g)) + '     '+'Distance: ' + str(sensor_data_processor.dt) # + '     ' + 'Batt: '+str(sensor_data_processor.bp)
+                standard_overlay = 'Cadance: ' +str(sensor_data_processor.cr) + '     ' +    ' KPH: ' +str(display_ts) + '     '+ 'Gear: '+ str(round(sensor_data_processor.g)) + '     '+'Distance: ' + str(sensor_data_processor.dt) + '     '+'Power: ' + str(round(sensor_data_processor.pr))
                 analysis_overlay_line1 = 'c: ' +str(sensor_data_processor.c) + ' ' + ' l: ' + str(sensor_data_processor.l) +' '+ 'r: '+str(sensor_data_processor.r) +' '+ 'cr: '+str(sensor_data_processor.cr)  +' '+ 's: '+str(sensor_data_processor.s)+' '+ 'ts: '+str(sensor_data_processor.ts)+' '+ 'sa: '+str(sensor_data_processor.sa)+' '+ 'g: '+str(sensor_data_processor.g)+' '+ 'bg: '+str(sensor_data_processor.bg) 
                 analysis_overlay_line2 = 'ax: '+str(sensor_data_processor.ax)+' '+ 'ay: '+str(sensor_data_processor.ay)+' '+ 'az: '+str(sensor_data_processor.az)+' '+ 'vx: '+str(sensor_data_processor.vx)+' '+ 'vy: '+str(sensor_data_processor.vy)+' '+ 'vz: '+str(sensor_data_processor.vz)+'\n'+ 't: '+str(sensor_data_processor.t)+' '+ 'p: '+str(sensor_data_processor.p)+' '+ 'h: '+str(sensor_data_processor.h)+' '+ 'bp: '+str(sensor_data_processor.bp)+' '+ 'ba: '+str(sensor_data_processor.ba) + "dt: " + str(sensor_data_processor.dt)
                 analysis_overlay_line3 = 'la: '+str(sensor_data_processor.la)+' '+'lo: '+str(sensor_data_processor.lo)+' '+'gs: '+str(sensor_data_processor.gs)+' '+'al: '+str(sensor_data_processor.al)+' '+'sn: '+str(sensor_data_processor.sn)

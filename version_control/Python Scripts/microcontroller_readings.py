@@ -14,34 +14,34 @@ class SensorDataProcessor:
 
     def __init__(self) -> None:
         # initialize all expected data as class instance attributes
-        self.c = 0
-        self.l = 0
-        self.r = 0
-        self.cr = 0
-        self.s = 0
-        self.ts = 0
-        self.sa = 0
-        self.g = 0
-        self.bg = 0
-        self.ax = 0
-        self.ay = 0
-        self.az = 0
-        self.vx = 0
-        self.vy = 0
-        self.vz = 0
-        self.t = 0
-        self.p = 0
-        self.h = 0
-        self.bp = 0
-        self.ba = 0
-        self.dt = 0
-        self.la = 0
-        self.lo = 0
-        self.gs = 0
-        self.al = 0
-        self.sn = 0
-        self.pr = 0
-        self.cd = 0
+        self.c = 0    		#Center wheel speed (RPM)
+        self.l = 0			#Left wheel speed (RPM)
+        self.r = 0			#Right wheel speed (RPM)
+        self.cr = 0			#Cranks speed (RPM)
+        self.s = 0			#Gearbox speed (RPM)
+        self.ts = 0			#Total speed (km/h)
+        self.sa = 0			#Steering angle (degrees)
+        self.g = 0			#Gear
+        self.bg = 0			#gear battery (Volts)
+        self.ax = 0			#Accelerometer X (m/s^2)
+        self.ay = 0			#Accelerometer Y (m/s^2)
+        self.az = 0			#Accelerometer Z (m/s^2)
+        self.vx = 0			#Magnetometer X (degrees)
+        self.vy = 0			#Magnetometer Y (degrees)
+        self.vz = 0			#Magnetometer Z (degrees)
+        self.t = 0			#Temperature (C)
+        self.p = 0			#Pressure (Pascals)
+        self.h = 0			#Humidity (%)
+        self.bp = 0			#Main battery (Volts)
+        self.ba = 0			#Backup screen battery (Volts)
+        self.dt = 0			#Distance travelled
+        self.la = 0			#Latitude
+        self.lo = 0			#Longitude
+        self.gs = 0			#GPS speed (km/h)
+        self.al = 0			#Altitude (meters)
+        self.sn = 0			#Satellite number
+        self.pr = 0			#Power (Watts)
+        self.cd = 0			#Power pedals cadence (RPM)
         
         
         self.df = 0
@@ -59,7 +59,7 @@ class SensorDataProcessor:
         self.espbike = 0
         self.espgear = 0
         self.defects = 0 # Variable for testing serial reading consistency when debugging
-        self.expected_ports = 3 # Sets the number of ports needed to be detected before check_port_complete function returns True
+        self.expected_ports = 2 # Sets the number of ports needed to be detected before check_port_complete function returns True
         
         # legend in order : central wheel=c, left wheel=l, right wheel=r, crank=cr, shaft=s, total speed=ts, gear set=g,
         # steering angle=sa, acceleration x=ax, acceleration y=ay, acceleration z=az, angular velocity x=vx, angular velocity y=vy
@@ -415,7 +415,7 @@ class SensorDataProcessor:
                 esp_hatch_list = list(esp_hatch_raw.split(","))
 #                 esp_hatch_dict = {esp_hatch_dictkeys[i]: float(esp_hatch_list[i]) for i in range(len(esp_hatch_dictkeys))}
                 esp_hatch_dict = {}
-#                 print(esp_hatch_list)
+#                 print(esp_hatch_list)          
                 for i in range(len(esp_hatch_dictkeys)):
                     try:
                         esp_hatch_dict[esp_hatch_dictkeys[i]] = float(esp_hatch_list[i])
