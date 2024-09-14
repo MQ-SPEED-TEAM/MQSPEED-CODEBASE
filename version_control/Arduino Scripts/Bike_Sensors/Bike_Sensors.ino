@@ -222,7 +222,7 @@ void setup() {
 //  //////////////////////////////////////STEERING ANGLE SETUP/////////////////////////////////////////
 //  ////////////////////////////////////////////////////////////////////////////////////
 
-//  as5600.begin(4);
+  as5600.begin(4);
 
 // }
 }
@@ -231,60 +231,20 @@ void setup() {
 
 void loop() {
 
-//if(run_sensor){
-//  steering_availability = as5600.detectMagnet();
-//  }
-//  if(steering_availability && wire_toggle_on==1){
-//    run_sensor = true;
-//  }
-//  else if(steering_availability && wire_toggle_on==0){
-//    Wire.begin();
-//    wire_toggle_on = 1;
-//    run_sensor = true;
-//  } else if(steering_availability && wire_toggle_on==1){
-//    Wire.end();
-//    wire_toggle_on = 0;
-//    run_sensor = false;
-//  } else if(steering_availability && wire_toggle_on==0){
-//    run_sensor = false;
-//  }
-//  else{}
-
-//steering_available = as5600.detectMagnet();
-//if(steering_available){
-//  wire_toggle_on = true;
-//  Wire.begin();
-//    steering_angle=as5600.rawAngle()/11.37777; //////conversion to degrees 
-//   if(steering_angle>180){
-//     steering_angle=-360+steering_angle;
-//   }         //////setting negative angles
-//   if(steering_angle>steering_angle_max){
-//     steering_angle_max=steering_angle;
-//   } ///capturing max value
-//   
-//   if(steering_angle<steering_angle_min){
-//     steering_angle_min=steering_angle;
-//   } ///capturing min value
-//   steering_angle_center=(steering_angle_max+steering_angle_min)/2; ////calculating center
-////} else if(!steering_available && wire_toggle_on){
-//  wire_toggle_on = false;
-//  Wire.end();
-//} else{}
-
-//if(run_sensor){
-//    steering_angle=as5600.rawAngle()/11.37777; //////conversion to degrees
-//  }
-// 
-//   if(steering_angle>180){
-//     steering_angle=-360+steering_angle;
-//   }         //////setting negative angles
-//   if(steering_angle>steering_angle_max){
-//     steering_angle_max=steering_angle;
-//   } ///capturing max value
-//   if(steering_angle<steering_angle_min){
-//     steering_angle_min=steering_angle;
-//   } ///capturing min value
-//   steering_angle_center=(steering_angle_max+steering_angle_min)/2; ////calculating center
+if(run_sensor){
+    steering_angle=as5600.rawAngle()/11.37777; //////conversion to degrees
+  }
+ 
+   if(steering_angle>180){
+     steering_angle=-360+steering_angle;
+   }         //////setting negative angles
+   if(steering_angle>steering_angle_max){
+     steering_angle_max=steering_angle;
+   } ///capturing max value
+   if(steering_angle<steering_angle_min){
+     steering_angle_min=steering_angle;
+   } ///capturing min value
+   steering_angle_center=(steering_angle_max+steering_angle_min)/2; ////calculating center
 
 
 int reading_l=digitalRead(hall_pin);
@@ -460,7 +420,7 @@ Serial.print(RPM_SHAFT,2);
 Serial.print(",");
 Serial.print(RPM_CRANK,2);
 Serial.print(",");
-Serial.println("0");
+Serial.println(steering_angle-142.4);
 //Serial.flush();
 
 print_time=print_now;

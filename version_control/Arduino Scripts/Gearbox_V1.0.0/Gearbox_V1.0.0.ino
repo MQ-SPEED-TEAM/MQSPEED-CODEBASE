@@ -35,10 +35,10 @@ int SPEED=550;              //Motor speed, decrease value to increase speed (if 
 int START_SPEED=1000;       //acceleration starting speed
 int ACCELERATION=20;        //Acceleration factor
 int START_SPEED_TEMP=START_SPEED; //acceleration starting speed temp
-bool DEBUGGING=true;       //Enable debugging mode
-float DISTANCE=117;           //Number of steps per gear change for 1-4
-int UPPER_DISTANCE = 99;    //Number of steps per gear change for 4-6
-int OVERSHOOT=30;           //Overshoots the gear to move to the next one
+bool DEBUGGING=false;       //Enable debugging mode
+float DISTANCE=120;           //Number of steps per gear change for 1-4
+float UPPER_DISTANCE = 80;    //Number of steps per gear change for 4-6
+float OVERSHOOT=37;           //Overshoots the gear to move to the next one
 
 RunningAverage battery_voltage(100);
 
@@ -215,6 +215,7 @@ GEARS LOGIC
 
 
       else if(digitalRead(SWITCH1)==HIGH && gear<6 && switch1==0){ //////////////////////////////////GEAR UP
+        if(gear!=5){
         digitalWrite(DIR_PIN, HIGH); //changes direction for gear up
 
         for(;START_SPEED_TEMP>0; START_SPEED_TEMP=START_SPEED_TEMP-ACCELERATION){
@@ -241,10 +242,41 @@ GEARS LOGIC
 
         gear++; //Increase gear
         switch1=1; //Set single press state
-      
+      }
+      else{
+        digitalWrite(DIR_PIN, HIGH); //changes direction for gear up
+
+        for(;START_SPEED_TEMP>0; START_SPEED_TEMP=START_SPEED_TEMP-ACCELERATION){
+          STEP((SPEED+START_SPEED_TEMP)/MS);
+        }
+        for (int i=0; i<((UPPER_DISTANCE+OVERSHOOT)*MS-(2*START_SPEED/ACCELERATION)); i++){
+          STEP(SPEED/MS); 
+        } //Takes steps for gear up
+        for(;START_SPEED_TEMP<START_SPEED; START_SPEED_TEMP=START_SPEED_TEMP+ACCELERATION){
+          STEP((SPEED+START_SPEED_TEMP)/MS);
+        }
+
+        digitalWrite(DIR_PIN, LOW); //changes direction for gear up
+
+        for(;START_SPEED_TEMP>0; START_SPEED_TEMP=START_SPEED_TEMP-ACCELERATION){
+          STEP((SPEED+START_SPEED_TEMP)/MS);
+        }
+        for (int i=0; i<(OVERSHOOT*MS-(2*START_SPEED/ACCELERATION)); i++){
+          STEP(SPEED/MS); 
+        } //Takes steps for gear up
+        for(;START_SPEED_TEMP<START_SPEED; START_SPEED_TEMP=START_SPEED_TEMP+ACCELERATION){
+          STEP((SPEED+START_SPEED_TEMP)/MS);
+        }
+
+        gear++; //Increase gear
+        switch1=1; //Set single press state
+
+        
+      }
       }
 
       else if (digitalRead(SWITCH2)==HIGH && gear>1 && switch2==0) { ////////////////////////////////GEAR DOWN
+        if(gear!=6){
         digitalWrite(DIR_PIN, LOW); //changes direction for gear down
 
         for(;START_SPEED_TEMP>0; START_SPEED_TEMP=START_SPEED_TEMP-ACCELERATION){
@@ -259,7 +291,25 @@ GEARS LOGIC
     
         gear--; //Decreases Gear
         switch2=1; //Set single press state
+        }
+        else{
+        digitalWrite(DIR_PIN, LOW); //changes direction for gear down
 
+        for(;START_SPEED_TEMP>0; START_SPEED_TEMP=START_SPEED_TEMP-ACCELERATION){
+          STEP((SPEED+START_SPEED_TEMP)/MS);
+        }
+        for (int i=0; i<(UPPER_DISTANCE*MS-(2*START_SPEED/ACCELERATION)); i++){
+          STEP(SPEED/MS); 
+        } //Takes steps for gear up
+        for(;START_SPEED_TEMP<START_SPEED; START_SPEED_TEMP=START_SPEED_TEMP+ACCELERATION){
+          STEP((SPEED+START_SPEED_TEMP)/MS);
+        }
+    
+        gear--; //Decreases Gear
+        switch2=1; //Set single press state
+
+          
+        }
       }
   }
 

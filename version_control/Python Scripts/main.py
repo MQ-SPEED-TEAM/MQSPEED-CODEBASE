@@ -102,20 +102,14 @@ def system():
         
         #Other calculations
         #total speed in kph
-        sensor_data_processor.ts = round((float(sensor_data_processor.c)*1.47655)*(60/1000),5)
+        sensor_data_processor.ts = round((float(sensor_data_processor.c)*1.434866)*(60/1000),5)
         
         # Read from pedal if pipe is available
         if conn1.poll():
             pedals_data = conn1.recv()
-            sensor_data_processor.pw = pedals_data[0]
+            sensor_data_processor.pr = pedals_data[0]
             sensor_data_processor.cd = pedals_data[1]
-        
-        #moving average of total speed
-        if len(ts_list) < window_size:
-            ts_list.append(sensor_data_processor.ts)
-        if len(ts_list) == window_size:
-            display_ts = round(moving_average(ts_list,window_size))
-            ts_list = ts_list[:1]
+            
 
         if (millis - time_last >=distance_calculation_interval): #Calculate distance in m from speed
             calculated_times += 1
@@ -145,6 +139,8 @@ def system():
             powerstate = True
             
         if GPIO.input(7) == GPIO.LOW:
+            debounce = True
+            
             if (millis >(20*printed_times+time_start)):
                 printed_times += 1
                 line_count += 1
@@ -181,7 +177,7 @@ def system():
                 #//////////////////////MODES FOR THE HUD//////////////////////////////////////////////////
                 #////////////////////////////////////////////////////////////////////////////////////////
                 #speed = round(float(sensor_data_processor.c)*0.000508,1)
-                standard_overlay = 'Cadance: ' +str(sensor_data_processor.cr) + '     ' +    ' KPH: ' +str(display_ts) + '     '+ 'Gear: '+ str(round(sensor_data_processor.g)) + '     '+'Distance: ' + str(sensor_data_processor.dt) + '     '+'Power: ' + str(round(sensor_data_processor.pr))
+                standard_overlay = '                                                                                                                                         Cadance: ' +str(round(sensor_data_processor.cr)) +'   KPH: ' +str(round(sensor_data_processor.ts))+ '   Gear: '+ str(round(sensor_data_processor.g)) + '                            '+'   Distance: ' + str(sensor_data_processor.dt) +'   Power: ' + str(round(sensor_data_processor.pr))+'             '
                 analysis_overlay_line1 = 'c: ' +str(sensor_data_processor.c) + ' ' + ' l: ' + str(sensor_data_processor.l) +' '+ 'r: '+str(sensor_data_processor.r) +' '+ 'cr: '+str(sensor_data_processor.cr)  +' '+ 's: '+str(sensor_data_processor.s)+' '+ 'ts: '+str(sensor_data_processor.ts)+' '+ 'sa: '+str(sensor_data_processor.sa)+' '+ 'g: '+str(sensor_data_processor.g)+' '+ 'bg: '+str(sensor_data_processor.bg) 
                 analysis_overlay_line2 = 'ax: '+str(sensor_data_processor.ax)+' '+ 'ay: '+str(sensor_data_processor.ay)+' '+ 'az: '+str(sensor_data_processor.az)+' '+ 'vx: '+str(sensor_data_processor.vx)+' '+ 'vy: '+str(sensor_data_processor.vy)+' '+ 'vz: '+str(sensor_data_processor.vz)+'\n'+ 't: '+str(sensor_data_processor.t)+' '+ 'p: '+str(sensor_data_processor.p)+' '+ 'h: '+str(sensor_data_processor.h)+' '+ 'bp: '+str(sensor_data_processor.bp)+' '+ 'ba: '+str(sensor_data_processor.ba) + "dt: " + str(sensor_data_processor.dt)
                 analysis_overlay_line3 = 'la: '+str(sensor_data_processor.la)+' '+'lo: '+str(sensor_data_processor.lo)+' '+'gs: '+str(sensor_data_processor.gs)+' '+'al: '+str(sensor_data_processor.al)+' '+'sn: '+str(sensor_data_processor.sn)
@@ -209,6 +205,7 @@ def system():
             camera.stop_preview()
             powerstate = False
             ports_incomplete = True
+            distance_traveled=0
             
             
 

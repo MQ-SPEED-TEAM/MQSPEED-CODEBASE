@@ -1,10 +1,3 @@
-"""
-Example of using mulitple devices: a PowerMeter and FitnessEquipment.
-
-Also demos Workout feature of FitnessEquipment, where the device has a thread and sends info to the master.
-
-Refer to subparsers/influx for another example of creating multiple devices at runtime
-"""
 from openant.easy.node import Node
 from openant.devices import ANTPLUS_NETWORK_KEY
 from openant.devices.power_meter import PowerMeter, PowerData
@@ -29,7 +22,7 @@ def ant_main(connection = None):
         if isinstance(data, PowerData):
 #             print(f"PowerMeter {page_name} ({page}) update: {data}")
             try:
-                connection.send([data.average_power,data.cadence])
+                connection.send([data.instantaneous_power,data.cadence])
             except:
                 pass
 

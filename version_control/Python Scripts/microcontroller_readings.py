@@ -34,7 +34,7 @@ class SensorDataProcessor:
         self.h = 0			#Humidity (%)
         self.bp = 0			#Main battery (Volts)
         self.ba = 0			#Backup screen battery (Volts)
-        self.dt = 0			#Distance travelled
+        self.dt = 0			#Distance travelled (meters)
         self.la = 0			#Latitude
         self.lo = 0			#Longitude
         self.gs = 0			#GPS speed (km/h)
