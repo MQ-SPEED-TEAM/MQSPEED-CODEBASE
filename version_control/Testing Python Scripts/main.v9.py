@@ -2,22 +2,25 @@
 #////////////////////////////////////////////////////////////////////
 
 import RPi.GPIO as GPIO
-from picamera import PiCamera
+from picamera2 import Picamera2, Preview
 import time  
 from datetime import datetime
 import datetime as dt
 import csv
 from microcontroller_readings import SensorDataProcessor
 import os
+from picamera2.utils import Transform
 
 #///////////////////////////////////SETUP////////////////////////////////////////////
 #//////////////////////////////////////////////////////////////////////////////
 
+BUTTON_PIN = 7
 GPIO.setmode(GPIO.BOARD) # Use physical pin numbering
-GPIO.setup(7, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Set pin 10 to be an input pin and set initial value to be pulled low (off)
+GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Set pin to be an input pin and set initial value to be pulled low (off)
 
 powerstate = False
-f=open('/home/pi/Desktop/Saves/Test_' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.csv', 'w')
+BASE_PATH = '/home/mqspeed/Desktop/'
+f=open(BASE_PATH + 'Saves/Test_' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.csv', 'w')
 writer = csv.writer(f)
 
 
@@ -51,10 +54,11 @@ display_ts = 0
 #///////////////////////CAMERA SETUP/////////////////////////////////
 #///////////////////////////////////////////////////////////////////
 
-camera = PiCamera()
-camera.rotation = 0
-camera.contrast = 75 
-camera.image_effect = "saturation" 
+picam2 = Picamera2()
+video_config = picam2.create_video_configuration(transform=Transform(rotation=180))
+picam2.configure(video_config)
+picam2.start()
+picam2.set_controls({"Contrast": 0.75, "Saturation": 1.5})
 
 # setup function
 sensor_data_processor = SensorDataProcessor()
@@ -99,27 +103,26 @@ while True:
         time_last=millis
         sensor_data_processor.dt = int(distance_traveled)
     
-    if GPIO.input(7) == GPIO.LOW and powerstate == False :
+    if GPIO.input(BUTTON_PIN) == GPIO.LOW and powerstate == False :
         if not file_open:
             file_open = True
         time.sleep(2)
         debounce = True
         #/////////////////////////////FILE SETUP/////////////////////////////////////////////
         #/////////////////////////////////////////////////////////////////////////////////
-        f=open('/home/pi/Desktop/Saves/Test_' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.csv', 'w')
+        f=open(BASE_PATH + 'Saves/Test_' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.csv', 'w')
         file_open = True
-        camera.start_recording('/home/pi/Desktop/Camera Videos/Vid_ ' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.h264')
-        writer = csv.writer(f)
+        video_filename = BASE_PATH + 'Camera Videos/Vid_ ' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.h264'
+        picam2.start_preview(Preview.QTGL)
+        picam2.start_recording(video_filename)
         #/////////////////////////Starting Camera and time/////////////////////////////// 
         #///////////////////////////////////////////////////////////////////////////////
-        camera.start_preview()
-        camera.annotate_background = True
-        camera.annotate_text_size = 32
+        # (No annotation support here)
         start = dt.datetime.now()
         millis_start = time.perf_counter()*1000
         powerstate = True
         
-    if GPIO.input(7) == GPIO.LOW:
+    if GPIO.input(BUTTON_PIN) == GPIO.LOW:
         if (millis >(20*printed_times+time_start)):
             printed_times += 1
             line_count += 1
@@ -161,23 +164,23 @@ while True:
             #///////////////////////SETTING THE MODE FOR THE HUD///////////////////////////////////////
             #/////////////////////////////////////////////////////////////////////////////////////////    
 #             camera.annotate_text = analysis_overlay +'\n'+ port_status
-            camera.annotate_text = standard_overlay
+            # (No annotation support here)
         
-    if GPIO.input(7) == GPIO.HIGH and powerstate == True and debounce == True:
+    if GPIO.input(BUTTON_PIN) == GPIO.HIGH and powerstate == True and debounce == True:
         #/////DEBOUNCE IN CASE/////#
         time.sleep(1)
         debounce = False
         
     
-    if GPIO.input(7) == GPIO.HIGH and powerstate == True and debounce == False:
+    if GPIO.input(BUTTON_PIN) == GPIO.HIGH and powerstate == True and debounce == False:
         #/////////////////////////SAVING AND CLOSING FILES/////////////////////////////////
         #/////////////////////////////////////////////////////////////////////////////////
         time.sleep(2)
         end_time = time.time()
         f.close()
         file_open = False
-        camera.stop_recording()
-        camera.stop_preview()
+        picam2.stop_recording()
+        picam2.stop_preview()
         powerstate = False
         ports_incomplete = True
  
