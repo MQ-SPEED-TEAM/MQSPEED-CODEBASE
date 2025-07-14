@@ -2,7 +2,8 @@
 #////////////////////////////////////////////////////////////////////
 
 import RPi.GPIO as GPIO
-from picamera import PiCamera
+from picamera2 import Picamera2, Preview
+from picamera2.encoders import H264Encoder
 import time  
 from datetime import datetime
 import datetime as dt
@@ -11,6 +12,7 @@ from microcontroller_readings_powertest import SensorDataProcessor
 import os
 from multiprocessing import Process,Pipe,set_start_method
 import power_meter as pmr
+from picamera2.utils import Transform
 
 
 def system():
@@ -21,7 +23,8 @@ def system():
     GPIO.setup(7, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Set pin 10 to be an input pin and set initial value to be pulled low (off)
 
     powerstate = False
-    f=open('/home/pi/Desktop/Saves/Test_' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.csv', 'w')
+    BASE_PATH = '/home/mqspeed/Desktop/'
+    f=open(BASE_PATH + 'Saves/Test_' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.csv', 'w')
     writer = csv.writer(f)
     
     # start power multiprocess
@@ -65,11 +68,13 @@ def system():
 
     #///////////////////////CAMERA SETUP/////////////////////////////////
     #///////////////////////////////////////////////////////////////////
-
-    camera = PiCamera()
-    camera.rotation = 0
-    camera.contrast = 75 #// also causes freezing
-    camera.image_effect = "saturation" #// causes freezing
+    encoder = H264Encoder()
+    picam2 = Picamera2()
+    video_config = picam2.create_video_configuration(transform=Transform(rotation=180))
+    picam2.configure(video_config)
+    picam2.start_preview(Preview.QTGL)
+    picam2.start()
+    picam2.set_controls({"Contrast": 0.75, "Saturation": 1.5})
 
     # setup function
     sensor_data_processor = SensorDataProcessor()
@@ -126,15 +131,14 @@ def system():
             debounce = True
             #/////////////////////////////FILE SETUP/////////////////////////////////////////////
             #/////////////////////////////////////////////////////////////////////////////////
-            f=open('/home/pi/Desktop/Saves/Test_' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.csv', 'w')
+            f=open(BASE_PATH + 'Saves/Test_' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.csv', 'w')
             file_open = True
-            camera.start_recording('/home/pi/Desktop/Camera Videos/Vid_ ' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.h264')
+            video_filename = BASE_PATH + 'Camera Videos/Vid_ ' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.h264'
+            picam2.start_recording(encoder, video_filename)
             writer = csv.writer(f)
             #/////////////////////////Starting Camera and time/////////////////////////////// 
             #///////////////////////////////////////////////////////////////////////////////
-            camera.start_preview()
-            camera.annotate_background = True
-            camera.annotate_text_size = 32
+            # (No annotation support here)
             start = dt.datetime.now()
             millis_start = time.perf_counter()*1000
             powerstate = True
@@ -185,7 +189,7 @@ def system():
                 #///////////////////////SETTING THE MODE FOR THE HUD///////////////////////////////////////
                 #/////////////////////////////////////////////////////////////////////////////////////////    
 #                 camera.annotate_text = analysis_overlay +'\n'+ port_status
-                camera.annotate_text = standard_overlay
+                # (No annotation support here)
             
         if GPIO.input(7) == GPIO.HIGH and powerstate == True and debounce == True:
             #/////DEBOUNCE IN CASE/////#
@@ -198,10 +202,10 @@ def system():
             end_time = time.time()
             f.close()
             file_open = False
-            camera.stop_recording()
+            picam2.stop_recording(encoder, video_filename)
+            picam2.stop_preview()
             power_process.join(1)
             power_process.terminate()
-            camera.stop_preview()
             powerstate = False
             ports_incomplete = True
             
