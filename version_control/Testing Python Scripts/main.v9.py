@@ -3,6 +3,7 @@
 
 import RPi.GPIO as GPIO
 from picamera2 import Picamera2, Preview
+from picamera2.encoders import H264Encoder
 import time  
 from datetime import datetime
 import datetime as dt
@@ -14,7 +15,7 @@ from picamera2.utils import Transform
 #///////////////////////////////////SETUP////////////////////////////////////////////
 #//////////////////////////////////////////////////////////////////////////////
 
-BUTTON_PIN = 7
+BUTTON_PIN = 10
 GPIO.setmode(GPIO.BOARD) # Use physical pin numbering
 GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Set pin to be an input pin and set initial value to be pulled low (off)
 
@@ -53,10 +54,11 @@ display_ts = 0
 
 #///////////////////////CAMERA SETUP/////////////////////////////////
 #///////////////////////////////////////////////////////////////////
-
+encoder = H264Encoder()
 picam2 = Picamera2()
 video_config = picam2.create_video_configuration(transform=Transform(rotation=180))
 picam2.configure(video_config)
+picam2.start_preview(Preview.QTGL)
 picam2.start()
 picam2.set_controls({"Contrast": 0.75, "Saturation": 1.5})
 
@@ -113,8 +115,7 @@ while True:
         f=open(BASE_PATH + 'Saves/Test_' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.csv', 'w')
         file_open = True
         video_filename = BASE_PATH + 'Camera Videos/Vid_ ' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.h264'
-        picam2.start_preview(Preview.QTGL)
-        picam2.start_recording(video_filename)
+        picam2.start_recording(encoder, video_filename)
         #/////////////////////////Starting Camera and time/////////////////////////////// 
         #///////////////////////////////////////////////////////////////////////////////
         # (No annotation support here)
@@ -179,7 +180,7 @@ while True:
         end_time = time.time()
         f.close()
         file_open = False
-        picam2.stop_recording()
+        picam2.stop_recording(encoder, video_filename)
         picam2.stop_preview()
         powerstate = False
         ports_incomplete = True
