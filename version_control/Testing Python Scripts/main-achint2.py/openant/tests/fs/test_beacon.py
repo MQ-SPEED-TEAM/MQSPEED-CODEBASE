@@ -1,6 +1,4 @@
-#!/usr/bin/env python
-#
-# openant udev rules installer
+# Ant-FS
 #
 # Copyright (c) 2012, Gustav Tiger <gustav@tiger.name>
 #
@@ -22,51 +20,25 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-import os
-import shutil
-import platform
-from subprocess import call
+
+import array
+import unittest
+
+from openant.fs.beacon import Beacon
 
 
-def check_root():
-    return os.geteuid() == 0
+class BeaconParseTest(unittest.TestCase):
+    def test_beacon_parse(self):
+        data = array.array("B", b"\x43\x04\x00\x03\x41\x05\x01\x00")
 
-
-def udev_reload_rules():
-    call(["udevadm", "control", "--reload-rules"])
-
-
-def udev_trigger():
-    call(
-        [
-            "udevadm",
-            "trigger",
-            "--subsystem-match=usb",
-            "--attr-match=idVendor=0fcf",
-            "--action=add",
-        ]
-    )
-
-
-def install_udev_rules(raise_exception):
-    if not platform.system() == "Linux":
-        msg = "Udev rules are only supported on Linux"
-        if raise_exception:
-            raise OSError(msg)
-        else:
-            print(msg)
-
-    if check_root():
-        shutil.copy("resources/42-ant-usb-sticks.rules", "/etc/udev/rules.d")
-        udev_reload_rules()
-        udev_trigger()
-    else:
-        msg = 'You must have root privileges to install udev rules. Run "sudo python setup.py udev_rules"'
-        if raise_exception:
-            raise OSError(msg)
-        else:
-            print(msg)
-
-
-if __name__ == "__main__":
-    install_udev_rules(True)
+        beacon = Beacon.parse(data)
+        self.assertIsInstance(beacon, Beacon)
+        self.assertFalse(beacon.is_data_available())
+        self.assertFalse(beacon.is_upload_enabled())
+        self.assertFalse(beacon.is_pairing_enabled())
+        self.assertEqual(beacon.get_channel_period(), 4)
+        self.assertEqual(
+            beacon.get_client_device_state(), Beacon.ClientDeviceState.LINK
+        )
+        self.assertEqual(beacon.get_serial(), 66881)
+        self.assertEqual(beacon.get_descriptor(), (1345, 1))

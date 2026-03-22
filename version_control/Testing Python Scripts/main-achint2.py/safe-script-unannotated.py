@@ -10,8 +10,8 @@ import datetime as dt
 import csv
 from microcontroller_readings import SensorDataProcessor
 import os
-from multiprocessing import Process,Pipe,set_start_method
-import pedal_readings as prd
+#from multiprocessing import Process,Pipe,set_start_method
+# import pedal_readings as prd
 from picamera2.utils import Transform
 
 
@@ -30,11 +30,11 @@ def system():
     
     
     # start power multiprocess
-    conn1, conn2 = Pipe() #conn1 is reading side and conn2 is writing side
-    set_start_method("spawn")
+   # conn1, conn2 = Pipe() #conn1 is reading side and conn2 is writing side
+   # set_start_method("spawn")
 
-    power_process = Process(target=prd.ant_main, args=(conn2,))
-    power_process.start()
+    # power_process = Process(target=prd.ant_main, args=(conn2,))
+    # power_process.start()
     
     #////////////////////////////VARIABLES/////////////////////////////////////
     #//////////////////////////////////////////////////////////////////////////////
@@ -73,10 +73,8 @@ def system():
     #///////////////////////////////////////////////////////////////////
     encoder = H264Encoder()
     picam2 = Picamera2()
-    video_config = picam2.create_video_configuration(transform=Transform(rotation=180))
+    video_config = picam2.create_video_configuration(transform=Transform(rotation=0))
     picam2.configure(video_config)
-    picam2.start_preview(Preview.QTGL)
-    picam2.start()
     picam2.set_controls({"Contrast": 0.75, "Saturation": 1.5})
 
     # setup function
@@ -110,10 +108,10 @@ def system():
         sensor_data_processor.ts = round((float(sensor_data_processor.c)*1.434866)*(60/1000),5)
         
         # Read from pedal if pipe is available
-        if conn1.poll():
-            pedals_data = conn1.recv()
-            sensor_data_processor.pr = pedals_data[0]
-            sensor_data_processor.cd = pedals_data[1]
+        #if conn1.poll():
+            #pedals_data = conn1.recv()
+           # sensor_data_processor.pr = pedals_data[0]
+           # sensor_data_processor.cd = pedals_data[1]
             
 
         if (millis - time_last >=distance_calculation_interval): #Calculate distance in m from speed
@@ -133,6 +131,7 @@ def system():
             f=open(BASE_PATH + 'Saves/Test_' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.csv', 'w')
             file_open = True
             video_filename = BASE_PATH + 'Camera Videos/Vid_ ' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.h264'
+            picam2.start_preview(Preview.QTGL, x=0, y=0, width = 1024, height = 600)
             picam2.start_recording(encoder, video_filename)
             writer = csv.writer(f)
             #/////////////////////////Starting Camera and time/////////////////////////////// 
@@ -188,7 +187,8 @@ def system():
                 analysis_overlay = analysis_overlay_line1 + '\n' + analysis_overlay_line2 + '\n' + analysis_overlay_line3         
                 #///////////////////////SETTING THE MODE FOR THE HUD///////////////////////////////////////
                 #/////////////////////////////////////////////////////////////////////////////////////////    
-#                 camera.annotate_text = analysis_overlay +'\n'+ port_status
+#                 picam2.annotate_text = analysis_overlay +'\n'+ port_status
+#                 picam2.set_overlay_text(standard_overlay)
                 # (No annotation support here)
             
         if GPIO.input(10) == GPIO.HIGH and powerstate == True and debounce == True:
@@ -203,10 +203,10 @@ def system():
             end_time = time.time()
             f.close()
             file_open = False
-            picam2.stop_recording(encoder, video_filename)
             picam2.stop_preview()
-            power_process.join(1)
-            power_process.terminate()
+            picam2.stop_recording()
+#             power_process.join(1)
+#             power_process.terminate()
             powerstate = False
             ports_incomplete = True
             distance_traveled=0
@@ -215,5 +215,6 @@ def system():
 
 if __name__ == '__main__':
     system()
+
 
 

@@ -1,6 +1,7 @@
-#!/usr/bin/env python
-#
-# openant udev rules installer
+"""
+Miscellaneous ANT functions
+"""
+# Ant
 #
 # Copyright (c) 2012, Gustav Tiger <gustav@tiger.name>
 #
@@ -23,50 +24,11 @@
 # DEALINGS IN THE SOFTWARE.
 
 import os
-import shutil
-import platform
-from subprocess import call
 
 
-def check_root():
-    return os.geteuid() == 0
+def format_list(l):
+    return "[" + " ".join(map(lambda a: str.format("{0:02x}", a), l)) + "]"
 
 
-def udev_reload_rules():
-    call(["udevadm", "control", "--reload-rules"])
-
-
-def udev_trigger():
-    call(
-        [
-            "udevadm",
-            "trigger",
-            "--subsystem-match=usb",
-            "--attr-match=idVendor=0fcf",
-            "--action=add",
-        ]
-    )
-
-
-def install_udev_rules(raise_exception):
-    if not platform.system() == "Linux":
-        msg = "Udev rules are only supported on Linux"
-        if raise_exception:
-            raise OSError(msg)
-        else:
-            print(msg)
-
-    if check_root():
-        shutil.copy("resources/42-ant-usb-sticks.rules", "/etc/udev/rules.d")
-        udev_reload_rules()
-        udev_trigger()
-    else:
-        msg = 'You must have root privileges to install udev rules. Run "sudo python setup.py udev_rules"'
-        if raise_exception:
-            raise OSError(msg)
-        else:
-            print(msg)
-
-
-if __name__ == "__main__":
-    install_udev_rules(True)
+def is_windows():
+    return os.name == "nt"

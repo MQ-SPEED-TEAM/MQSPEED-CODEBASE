@@ -21,6 +21,7 @@ def system():
 
     GPIO.setmode(GPIO.BOARD) # Use physical pin numbering
     GPIO.setup(10, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Set pin 10 to be an input pin and set initial value to be pulled low (off)
+    GPIO.setup(12, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) 
 
     powerstate = False
     BASE_PATH = '/home/mqspeed/Desktop/'
@@ -205,11 +206,21 @@ def system():
             file_open = False
             picam2.stop_recording(encoder, video_filename)
             picam2.stop_preview()
-            power_process.join(1)
-            power_process.terminate()
             powerstate = False
             ports_incomplete = True
             distance_traveled=0
+        
+        if GPIO.input(12) == GPIO.HIGH:
+            print("terminating power process")
+#                     conn1.send("END")
+#                     print("conn1 message sent")
+#                     power_process.join()
+#                     conn1.close()
+#                     print("conn1 off")
+            power_process.join(1)
+            power_process.terminate()
+            print("shutting down...")
+            sys.exit()
             
             
 
