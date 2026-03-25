@@ -1,4 +1,4 @@
-#//////////////////////////////IMPORTING LIBRARIES////////////////////
+#// Raspberry Pi script (Python) — receives that data, records it, and manages the system power state. Also responsible for recording video from the camera and overlaying data on the video. The Pi also sends commands to the ESP32 to control the transceiver.
 #////////////////////////////////////////////////////////////////////
 
 import RPi.GPIO as GPIO
@@ -147,7 +147,13 @@ def system():
                          f"t: {sensor_data_processor.t}  p: {sensor_data_processor.p}  h: {sensor_data_processor.h}",
                          f"bp: {sensor_data_processor.bp}  ba: {sensor_data_processor.ba}  dt: {sensor_data_processor.dt}",
                          f"la: {sensor_data_processor.la}  lo: {sensor_data_processor.lo}  "
-                         f"gs: {sensor_data_processor.gs}  al: {sensor_data_processor.al}  sn: {sensor_data_processor.sn}"]
+                         f"gs: {sensor_data_processor.gs}  al: {sensor_data_processor.al}  sn: {sensor_data_processor.sn}"],
+
+            "imu": [f"rl: {sensor_data_processor.rl}  ph: {sensor_data_processor.ph}  yw: {sensor_data_processor.yw}",
+                        f"qw: {sensor_data_processor.qw}  qx: {sensor_data_processor.qx}  qy: {sensor_data_processor.qy}  qz: {sensor_data_processor.qz}",
+                        f"ax: {sensor_data_processor.ax}  ay: {sensor_data_processor.ay}  az: {sensor_data_processor.az}",
+                        f"mx: {sensor_data_processor.mx}  my: {sensor_data_processor.my}  mz: {sensor_data_processor.mz}",
+                        f"gx: {sensor_data_processor.gx}  gy: {sensor_data_processor.gy}  gz: {sensor_data_processor.gz}"],
         }
 
         overlay_lines = overlay_dict.get(overlay_mode, ["Invalid overlay mode"])
