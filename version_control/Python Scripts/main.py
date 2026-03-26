@@ -114,6 +114,7 @@ def system():
             pedals_data = conn1.recv()
             sensor_data_processor.pr = pedals_data[0]
             sensor_data_processor.cd = pedals_data[1]
+            sensor_data_processor.tq = pedals_data[2]
             
 
         if (millis - time_last >=distance_calculation_interval): #Calculate distance in m from speed
