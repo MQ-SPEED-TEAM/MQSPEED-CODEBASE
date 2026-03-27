@@ -152,7 +152,7 @@ void setup() {
   if (!bno08x.enableReport(SH2_ACCELEROMETER, 10000)) {
     Serial.println("Failed to enable accelerometer");
   }
-  if (!bno08x.enableReport(SH2_MAGNETIC_FIELD, 10000)) {
+  if (!bno08x.enableReport(SH2_MAGNETIC_FIELD_CALIBRATED, 10000)) {
     Serial.println("Failed to enable magnetometer");
   }
   if (!bno08x.enableReport(SH2_GYROSCOPE_CALIBRATED, 10000)) {
@@ -200,7 +200,7 @@ void loop() {
         ay = sensorValue.un.accelerometer.y;
         az = sensorValue.un.accelerometer.z;
     }
-    if (sensorValue.sensorId == SH2_MAGNETIC_FIELD) {
+    if (sensorValue.sensorId == SH2_MAGNETIC_FIELD_CALIBRATED) {
         mx = sensorValue.un.magneticField.x;
         my = sensorValue.un.magneticField.y;
         mz = sensorValue.un.magneticField.z;
@@ -267,24 +267,24 @@ void loop() {
    Serial.print(",");
    Serial.print(yaw, 2); 
    Serial.print(",");
-   Serial.print(qw, 4);
+   Serial.print(qw, 2);
    Serial.print(",");
-   Serial.print(qx, 4);
+   Serial.print(qx, 2);
    Serial.print(",");
-   Serial.print(qy, 4);
+   Serial.print(qy, 2);
    Serial.print(",");
-   Serial.print(qz, 4);
+   Serial.print(qz, 2);
    Serial.print(",");
 
-   Serial.print(ax, 4); Serial.print(","); // print accelerometer, magnetometer, and gyroscope readings
-   Serial.print(ay, 4); Serial.print(",");
-   Serial.print(az, 4); Serial.print(",");
-   Serial.print(mx, 4); Serial.print(",");
-   Serial.print(my, 4); Serial.print(",");
-   Serial.print(mz, 4); Serial.print(",");
-   Serial.print(gx, 4); Serial.print(",");
-   Serial.print(gy, 4); Serial.print(",");
-   Serial.print(gz, 4); Serial.print(",");
+   Serial.print(ax, 2); Serial.print(","); // print accelerometer, magnetometer, and gyroscope readings
+   Serial.print(ay, 2); Serial.print(",");
+   Serial.print(az, 2); Serial.print(",");
+   Serial.print(mx, 2); Serial.print(",");
+   Serial.print(my, 2); Serial.print(",");
+   Serial.print(mz, 2); Serial.print(",");
+   Serial.print(gx, 2); Serial.print(",");
+   Serial.print(gy, 2); Serial.print(",");
+   Serial.print(gz, 2); Serial.print(",");
  
    
    //print environment

@@ -112,7 +112,7 @@ def system():
 
     # Define overlay function
     # Overlay mode selection
-    overlay_mode = "standard"
+    overlay_mode = "imu"
     # Text overlay settings
     
     def generate_overlay():
