@@ -72,36 +72,35 @@ class SafeUART:
         
         crc = self.calc_crc(send_buffer)
         packet = send_buffer + bytes([crc]) + b'\n'
-        return self.uart.write(packet)
+        return self.serial.write(packet)
     
-    def receive_data(self, max_len: int) -> tuple[int, bytes | None]:
+    def receive_data(self) -> bytes:
         """
         :param: max_len max_len of the expected data.
-        :return: Returns received data bytes in the form
-        ([Length], [data bytes]) and returns (-1, None) in 
+        :return: Returns received data bytes and returns (None) in 
         following cases:
         - Received data more than max_buffer_len
         - Received and calculated CRC do not match
         """
-        if max_len > self.max_buffer_len:
-            return -1, None
+#         if max_len > self.max_buffer_len:
+#             return None
         
-        available = self.uart.in_waiting
+        available = self.serial.in_waiting
 
         # Send [NAK][CRC][\n] if more received bytes than buffer size
-        if available > max_len:
-            nak_packet = bytes([
-                self.nak_byte,
-                self.calc_crc(bytes([self.nak_byte]))]) + b'\n'
-            self.uart.write(nak_packet)
-            return -1, None
+#         if available > max_len:
+#             nak_packet = bytes([
+#                 self.nak_byte,
+#                 self.calc_crc(bytes([self.nak_byte]))]) + b'\n'
+#             self.serial.write(nak_packet)
+#             return None
         # If bytes received
-        elif 0 < available <= max_len:
-            data = self.uart.read_until(b'\n')
+        if 0 < available:
+            data = self.serial.read_until(b'\n')
 
             # Return error, if less than 2 bytes received
             if len(data) < 2:
-                return -1, None
+                return None
             
             payload = data[:-2] # Data stripped off crc and terminator
             received_crc = data[-2] # CRC of received data
@@ -111,20 +110,28 @@ class SafeUART:
                 nak_packet = bytes([
                     self.nak_byte,
                     self.calc_crc(bytes([self.nak_byte]))]) + b'\n'
-                self.uart.write(nak_packet)
-                return -1, None
+                self.serial.write(nak_packet)
+                return None
             # Send [ACK][CRC][\n] if CRC do match
             else:
                 ack_packet = bytes([
                     self.ack_byte, 
                     self.calc_crc(bytes([self.ack_byte]))]) + b'\n'
-                self.uart.write(ack_packet)
-                payload = payload.append(b'\n')   # Add the terminator back to the payload
-                return len(payload), payload
+                self.serial.write(ack_packet)
+                payload = payload + b'\n'   # Add the terminator back to the payload
+                return payload
             
-        return 0, None
+        return b''
     
+    def __enter__(self):
+        """Enter context manager"""
+        return self
+    
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        """Cleanly close the serial port from context manager"""
+        self.serial.close()
+        
     def close(self):
         """Cleanly close the serial port"""
-        if self.uart.is_open:
-            self.uart.close()
+        if self.serial.is_open:
+            self.serial.close()

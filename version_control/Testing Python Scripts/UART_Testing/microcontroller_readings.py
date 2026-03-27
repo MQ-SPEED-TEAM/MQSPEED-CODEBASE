@@ -159,7 +159,7 @@ class SensorDataProcessor:
         current_array = 0
         if esp_1 != None:
             while current_array <= array_checks:
-                byte_read = esp_1.receive_data(128)  # Read bytes with crc from serial port
+                byte_read = esp_1.receive_data()  # Read bytes with crc from serial port
                 if byte_read: #if not empty
                     try:
                         byte_char = byte_read.decode()  # Decode bytes to string

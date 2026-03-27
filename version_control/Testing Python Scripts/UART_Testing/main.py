@@ -12,7 +12,7 @@ if __name__ == '__main__':
     #                                        bytesize=serial.EIGHTBITS))
     # uart.serial.reset_input_buffer()
     # time.sleep(1)
-
+    
     ports_incomplete = True
     # setup function
     sensor_data_processor = SensorDataProcessor()
@@ -25,6 +25,9 @@ if __name__ == '__main__':
             if sensor_data_processor.check_port_complete(ports_data):
                 ports_incomplete = False
                 port_status = "devices all connected"
+    while True:            
+        print(sensor_data_processor.g)
+        print(sensor_data_processor.bg)
 
     # print("ports complete status:")
     # print(not ports_incomplete)
