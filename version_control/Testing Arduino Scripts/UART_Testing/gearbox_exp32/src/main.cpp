@@ -635,11 +635,11 @@ void loop()
     int16_t sentBytes = uart.sendSafeData((uint8_t *)msg, msgLen);
     if(sentBytes == -1)
     {
-      Serial.println("Transmission failed");
+      //Serial.println("Transmission failed");
     }
     else
     {
-      Serial.println("Transmission successful");
+      //Serial.println("Transmission successful");
     }
     
     print_wait_time = millis(); // Reset wait time

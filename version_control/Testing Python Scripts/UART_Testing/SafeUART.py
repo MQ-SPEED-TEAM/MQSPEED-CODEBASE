@@ -44,56 +44,52 @@ class SafeUART:
             crc = self.crc_table[crc ^ b]
         return crc
 
-    def send_data(self, send_buffer: bytes) -> int:
+    def send_data(self, send_buffer: bytes) -> int | None:
         if len(send_buffer) > self.max_buffer_len:
-            return -1
+            return None
 
         crc = self.calc_crc(send_buffer)
         packet = send_buffer + bytes([crc]) + b'\n'
         return self.serial.write(packet)
 
-    def receive_data(self) -> bytes | int:
+    def receive_data(self) -> bytes | None:
         """
-        :return: Bytes (ending with '\n') or -1 if CRC check fails or buffer overflow
-                 Returns b'' if no data available
+        :return: Received bytes (ending with '\n') or None on error / no data
         """
         available = self.serial.in_waiting
 
         if available > self.max_buffer_len:
-            # Send NAK
             nak = bytes([self.nak_byte])
             packet = nak + bytes([self.calc_crc(nak)]) + b'\n'
             self.serial.write(packet)
-            return -1
+            return None
 
         elif available > 0:
             data = self.serial.read_until(b'\n')
 
             if len(data) < 2:
-                return -1
+                return None
 
             payload = data[:-2]
             received_crc = data[-2]
 
             if self.calc_crc(payload) != received_crc:
-                # Send NAK
                 nak = bytes([self.nak_byte])
                 packet = nak + bytes([self.calc_crc(nak)]) + b'\n'
                 self.serial.write(packet)
-                return -1
+                return None
             else:
-                # Send ACK
                 ack = bytes([self.ack_byte])
                 packet = ack + bytes([self.calc_crc(ack)]) + b'\n'
                 self.serial.write(packet)
 
                 return payload + b'\n'
 
-        return b''
+        return None
 
-    def send_safe_data(self, send_buffer: bytes) -> int:
+    def send_safe_data(self, send_buffer: bytes) -> int | None:
         if len(send_buffer) > self.max_buffer_len:
-            return -1
+            return None
 
         crc = self.calc_crc(send_buffer)
         packet = send_buffer + bytes([crc]) + b'\n'
@@ -107,18 +103,12 @@ class SafeUART:
             start_time = time.monotonic()
 
             while (time.monotonic() - start_time) < self.ack_timeout:
-                response = self.receive_data()
+                if self.serial.in_waiting > 2:
+                    data = self.serial.read_until(b'\n')
 
-                if response == -1:
-                    break  # NAK → retry
-
-                if isinstance(response, bytes) and len(response) >= 1:
-                    if response[0] == self.ack_byte:
+                    if len(data) == 2 and data[0] == self.ack_byte:
                         return bytes_sent
-
-                time.sleep(0.01)
-
-        return -1
+        return None
 
     def close(self):
         if self.serial.is_open:
