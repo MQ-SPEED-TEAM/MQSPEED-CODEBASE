@@ -21,6 +21,7 @@ class SafeUART
     // Public methods
     int16_t sendData(uint8_t* sendBuffer, size_t sendBufferLen);
     int16_t receiveData(uint8_t* receiveBuffer, size_t receiveBufferLen);
+    int16_t sendSafeData(uint8_t* sendBuffer, size_t sendBufferLen);
 };
 
 #endif

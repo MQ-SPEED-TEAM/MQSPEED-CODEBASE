@@ -124,3 +124,56 @@ int16_t SafeUART::receiveData(uint8_t* receiveBuffer, size_t receiveBufferLen)
     }
     return 0;
 }
+
+/** sendSafeData
+ * @brief Sends data and performs handshake. Waits for acknowledge or 
+ * not-acknowledge. If an not acknowledge is received it sends the data one
+ * more time. If the second transmission also fails, the function returns
+ * with an error (-1).
+ * 
+ * @param sendBuffer: Buffer with the data that needs to be sent.
+ * @param sendBufferLen: Size of buffer in bytes.
+ * @return number of bytes sent or -1 if transmission unsuccessful
+ */ 
+int16_t SafeUART::sendSafeData(uint8_t * sendBuffer, size_t sendBufferLen)
+{
+    uint8_t outputData[2];  // Buffer used to send CRC + terminator
+    uint8_t inputData[16];  // Input buffer for the acknowledge message
+    int16_t bytesSent;
+    int16_t bytesReceived;
+    if(sendBufferLen > maxBufferLen)
+    {
+        return -1;
+    }
+
+    // Calculate CRC of the sendBuffer data
+    outputData[0] = calcCRC(sendBuffer, sendBufferLen);
+    outputData[1] = '\n';
+    
+    uint8_t dataSendCntr = 0;  // Counts how many times the data has been sent
+    bool dataTransmissionSuccessful = false;
+    do
+    {
+        // Send data
+        bytesSent = uart.write(sendBuffer, sendBufferLen);
+        bytesSent += uart.write(outputData, 2); // Also send CRC + terminator
+        dataSendCntr++;
+
+        // Receive the response which should be either acknowledge or not-acknowledge
+        bytesReceived = receiveData(inputData, sizeof(inputData)/sizeof(inputData[0]));
+
+        // Check if received response was an acknowledge (ASCII ACK or 0x06)
+        if(bytesReceived == 1 && inputData[0] == 0x06)
+        {
+            dataTransmissionSuccessful = true;  // Transmission successful, leave while loop
+        }
+    } while (dataTransmissionSuccessful == false && dataSendCntr < 2);  // Retries once in case of failed data transmission
+
+    // Return Error -1 if data transmission was not successful
+    if(dataTransmissionSuccessful == false)
+    {
+        return -1;
+    }
+    // Return amount of bytes sent if transmission successful
+    return bytesSent;
+}

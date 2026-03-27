@@ -625,13 +625,21 @@ void loop()
   // }
   
 
-  if((millis() - print_wait_time) > 100)  // Print log data every 500 ms
+  if((millis() - print_wait_time) > 1000)  // Print log data every 500 ms
   {
     char msg[128] = "";
     //int msgLen = sprintf(msg, "%i%i Current Gear: %i, State: %i, button 1 state: %i, button 2 state: %i, Stall guard: %i, GCONF: %i, millis: %i, CRC: ", stall_on, digitalRead(ENDSTOP), gear, current_state, bt1_pressed, bt2_pressed, driver.SG_RESULT(), driver.GCONF(), millis());
     int msgLen = sprintf(msg, "g,%i,bg,%i", gear, millis());
 
-    size_t sentBytes = uart.sendData((uint8_t *)msg, msgLen);
+    int16_t sentBytes = uart.sendSafeData((uint8_t *)msg, msgLen);
+    if(sentBytes == -1)
+    {
+      Serial.println("Transmission failed");
+    }
+    else
+    {
+      Serial.println("Transmission successful");
+    }
     
     print_wait_time = millis(); // Reset wait time
   }
