@@ -69,7 +69,7 @@ int16_t SafeUART::sendData(uint8_t * sendBuffer, size_t sendBufferLen)
  * an acknowledge response ([ACK][CRC][\n]) is sent back. If the CRC match fails an 
  * not-acknowledge response ([NAK][CRC][\n]) is sent.
  * @param receiveBuffer Buffer that will be filled with received bytes. Needs to be 
- *                       sufficiently big.
+ *                       sufficiently big and termination character '\n' will also be returned.
  * @param receiveBufferLen Size of buffer in bytes
  * @return  0: no data received
  *          >0: number of received data and acknowledge successfully sent
@@ -119,7 +119,8 @@ int16_t SafeUART::receiveData(uint8_t* receiveBuffer, size_t receiveBufferLen)
             outputData[1] = calcCRC(outputData, 1);
             outputData[2] = '\n';
             uart.write(outputData, 3);
-            return bytesRead-1; // Return number of received bytes (without CRC byte)
+            receiveBuffer[bytesRead - 1] = '\n';    // Add terminator \n in place of CRC
+            return bytesRead; // Return number of received bytes (without CRC byte) but with \n
         }
     }
     return 0;
@@ -163,7 +164,7 @@ int16_t SafeUART::sendSafeData(uint8_t * sendBuffer, size_t sendBufferLen)
         bytesReceived = receiveData(inputData, sizeof(inputData)/sizeof(inputData[0]));
 
         // Check if received response was an acknowledge (ASCII ACK or 0x06)
-        if(bytesReceived == 1 && inputData[0] == 0x06)
+        if(bytesReceived == 2 && inputData[0] == 0x06)
         {
             dataTransmissionSuccessful = true;  // Transmission successful, leave while loop
         }

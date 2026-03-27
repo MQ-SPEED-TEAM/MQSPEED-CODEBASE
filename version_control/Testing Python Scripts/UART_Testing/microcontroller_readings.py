@@ -118,7 +118,7 @@ class SensorDataProcessor:
         try: 
             # SafeUART is a wrapper class for serial to add CRC functionality
             esp_1 = SafeUART(serial.Serial(port='/dev/ttyAMA3', baudrate=115200, 
-                                           timeout=1, parity=serial.PARITY_NONE,
+                                           timeout=0.1, parity=serial.PARITY_NONE,
                                            stopbits=serial.STOPBITS_ONE,
                                            bytesize=serial.EIGHTBITS))
             esp_1.serial.reset_input_buffer()

@@ -1,29 +1,14 @@
 import serial
+import time
+
 
 class SafeUART:
-    """Hardware UART interface for high-speed communication"""
-    def __init__(self, serial):
-        """
-        Initializes the safeUART functionality.
+    """Hardware UART interface for CRC-protected communication with ACK/NAK handshake"""
 
-        :param port: Serial port
-        :param baudrate: Baud rate
-        :param parity: 
-        
-        """
-        # self.uart = serial.Serial(
-        #     port=port,
-        #     baudrate=baudrate,
-        #     parity=parity,
-        #     stopbits=serial.STOPBITS_ONE,
-        #     bytesize=serial.EIGHTBITS,
-        #     timeout=1,
-        #     write_timeout=0.1,
-        #     # Hardware flow control
-        #     rtscts=False,
-        #     dsrdtr=False
-        # )
-        self.serial = serial
+    def __init__(self, serial_port: serial.Serial, ack_timeout: float = 1.0):
+        self.serial = serial_port
+        self.ack_timeout = ack_timeout
+
         self.ack_byte = 0x06
         self.nak_byte = 0x15
         self.max_buffer_len = 128
@@ -52,86 +37,95 @@ class SafeUART:
             0xde, 0xd9, 0xd0, 0xd7, 0xc2, 0xc5, 0xcc, 0xcb, 0xe6, 0xe1, 0xe8, 0xef,
             0xfa, 0xfd, 0xf4, 0xf3
         ]
-        
+
     def calc_crc(self, data: bytes) -> int:
-        """Calculate the CRC8-ATM with polynomial 0x7 
-        :param: data bytes to calculate the CRC with.
-        :return: CRC"""
-        crc = 0x00
+        crc = 0
         for b in data:
             crc = self.crc_table[crc ^ b]
         return crc
-    
+
     def send_data(self, send_buffer: bytes) -> int:
-        """
-        :param: send_buffer buffer holding the data to be sent
-        :return: Number of bytes sent or -1 if send_buffer length
-        is bigger than max_buffer_len"""
         if len(send_buffer) > self.max_buffer_len:
             return -1
-        
+
         crc = self.calc_crc(send_buffer)
         packet = send_buffer + bytes([crc]) + b'\n'
         return self.serial.write(packet)
-    
-    def receive_data(self) -> bytes:
+
+    def receive_data(self) -> bytes | int:
         """
-        :param: max_len max_len of the expected data.
-        :return: Returns received data bytes and returns (None) in 
-        following cases:
-        - Received data more than max_buffer_len
-        - Received and calculated CRC do not match
+        :return: Bytes (ending with '\n') or -1 if CRC check fails or buffer overflow
+                 Returns b'' if no data available
         """
-#         if max_len > self.max_buffer_len:
-#             return None
-        
         available = self.serial.in_waiting
 
-        # Send [NAK][CRC][\n] if more received bytes than buffer size
-#         if available > max_len:
-#             nak_packet = bytes([
-#                 self.nak_byte,
-#                 self.calc_crc(bytes([self.nak_byte]))]) + b'\n'
-#             self.serial.write(nak_packet)
-#             return None
-        # If bytes received
-        if 0 < available:
+        if available > self.max_buffer_len:
+            # Send NAK
+            nak = bytes([self.nak_byte])
+            packet = nak + bytes([self.calc_crc(nak)]) + b'\n'
+            self.serial.write(packet)
+            return -1
+
+        elif available > 0:
             data = self.serial.read_until(b'\n')
 
-            # Return error, if less than 2 bytes received
             if len(data) < 2:
-                return None
-            
-            payload = data[:-2] # Data stripped off crc and terminator
-            received_crc = data[-2] # CRC of received data
+                return -1
 
-            # Send [NAK][CRC][\n] if CRC do not match
+            payload = data[:-2]
+            received_crc = data[-2]
+
             if self.calc_crc(payload) != received_crc:
-                nak_packet = bytes([
-                    self.nak_byte,
-                    self.calc_crc(bytes([self.nak_byte]))]) + b'\n'
-                self.serial.write(nak_packet)
-                return None
-            # Send [ACK][CRC][\n] if CRC do match
+                # Send NAK
+                nak = bytes([self.nak_byte])
+                packet = nak + bytes([self.calc_crc(nak)]) + b'\n'
+                self.serial.write(packet)
+                return -1
             else:
-                ack_packet = bytes([
-                    self.ack_byte, 
-                    self.calc_crc(bytes([self.ack_byte]))]) + b'\n'
-                self.serial.write(ack_packet)
-                payload = payload + b'\n'   # Add the terminator back to the payload
-                return payload
-            
+                # Send ACK
+                ack = bytes([self.ack_byte])
+                packet = ack + bytes([self.calc_crc(ack)]) + b'\n'
+                self.serial.write(packet)
+
+                return payload + b'\n'
+
         return b''
-    
-    def __enter__(self):
-        """Enter context manager"""
-        return self
-    
-    def __exit__(self, exc_type, exc_value, exc_traceback):
-        """Cleanly close the serial port from context manager"""
-        self.serial.close()
-        
+
+    def send_safe_data(self, send_buffer: bytes) -> int:
+        if len(send_buffer) > self.max_buffer_len:
+            return -1
+
+        crc = self.calc_crc(send_buffer)
+        packet = send_buffer + bytes([crc]) + b'\n'
+
+        attempts = 0
+
+        while attempts < 2:
+            bytes_sent = self.serial.write(packet)
+            attempts += 1
+
+            start_time = time.monotonic()
+
+            while (time.monotonic() - start_time) < self.ack_timeout:
+                response = self.receive_data()
+
+                if response == -1:
+                    break  # NAK → retry
+
+                if isinstance(response, bytes) and len(response) >= 1:
+                    if response[0] == self.ack_byte:
+                        return bytes_sent
+
+                time.sleep(0.01)
+
+        return -1
+
     def close(self):
-        """Cleanly close the serial port"""
         if self.serial.is_open:
             self.serial.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
