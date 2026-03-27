@@ -112,7 +112,7 @@ def system():
 
     # Define overlay function
     # Overlay mode selection
-    overlay_mode = "standard"
+    overlay_mode = "analysis"
     # Text overlay settings
     
     def generate_overlay():
@@ -148,7 +148,7 @@ def system():
                          f"bp: {sensor_data_processor.bp}  ba: {sensor_data_processor.ba}  dt: {sensor_data_processor.dt}",
                          f"la: {sensor_data_processor.la}  lo: {sensor_data_processor.lo}  "
                          f"gs: {sensor_data_processor.gs}  al: {sensor_data_processor.al}  sn: {sensor_data_processor.sn}" ,
-                         f"tq: {sensor_data_processor.tq}  cd: {sensor_data_processor.cd}   pr: {sensor_data_processor.pr}]   
+                         f"tq: {sensor_data_processor.tq}  cd: {sensor_data_processor.cd}   pr: {sensor_data_processor.pr}"]   
              }
 
 
