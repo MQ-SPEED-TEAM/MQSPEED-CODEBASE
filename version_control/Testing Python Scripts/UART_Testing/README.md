@@ -383,6 +383,10 @@ if __name__ == '__main__':
 
 ---
 
+### Ressources
+
+- Helper Website to calculate CRC checksums: https://www.sunshine2k.de/coding/javascript/crc/crc_js.html
+
 ### License
 
 Written by Pascal Brülhart
