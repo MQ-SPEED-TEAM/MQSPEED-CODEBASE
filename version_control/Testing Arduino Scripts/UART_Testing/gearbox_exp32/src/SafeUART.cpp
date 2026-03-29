@@ -160,12 +160,11 @@ int16_t SafeUART::sendSafeData(uint8_t * sendBuffer, size_t sendBufferLen)
         bytesSent += uart.write(outputData, 2); // Also send CRC + terminator
         dataSendCntr++;
 
+        // Create a timeout to wait for the acknowledge response 
         unsigned long startTime = millis();
         while((millis() - startTime) < ack_timeout)
         {
-            // Receive the response which should be either acknowledge or not-acknowledge
-            // bytesReceived = receiveData(inputData, sizeof(inputData)/sizeof(inputData[0]));
-            
+            // Receive the response which should be either acknowledge, if not try again
             if(uart.available() > 2)
             {
                 bytesReceived = uart.readBytesUntil('\n', inputData, sizeof(inputData)/sizeof(inputData[0]));
