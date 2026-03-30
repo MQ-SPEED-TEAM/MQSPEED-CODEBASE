@@ -4,7 +4,7 @@ This document explains how to configure the Raspberry Pi 5 so that its hardware 
 
 Currently, the Raspberry Pi connects to the CH340C USB transceiver chip on the ESP32 dev board via USB, and this chip converts the signal into UART. The same UART0 interface (GPIO1 TX0 and GPIO3 RX0) is available on ESP32 header pins 34 and 35. Therefore, the same UART interface can be used for the connection between the Raspberry Pi and the ESP32 via UART. There is no need to use USB for bare data transmission. 
 
-To test that data can safely be transmitted between the Raspberry Pi and the ESP32 via UART, the class SafeUART has been written for the ESP32 in C++ and for the Raspberry Pi in Python. All the code for this test is located on the GitHub branch: *test_substituting_usb_with_uart*.
+To test that data can safely be transmitted between the Raspberry Pi and the ESP32 via UART, the class SafeUART has been written for the ESP32 in C++ and for the Raspberry Pi in Python. All the code for this test is located on the GitHub branch: *feature-pascal*.
 
 The code for the Raspberry Pi is located at:
 
