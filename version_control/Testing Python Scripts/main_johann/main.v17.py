@@ -84,6 +84,7 @@ def system():
 
      # setup function
     sensor_data_processor = SensorDataProcessor()
+    
 
     # Boot auto porting on startup
     if ports_incomplete:
@@ -284,6 +285,7 @@ def system():
                 periodic_overlay_update()
                 
                 # run any calculations before this function is called
+                data_stream = 
                 data_stream = sensor_data_processor.process()
                 data_stream.insert(0, str(datetime.now().strftime('%H_%M_%S_%f'))[:-3])
                 
