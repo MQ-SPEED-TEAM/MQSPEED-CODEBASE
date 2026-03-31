@@ -39,7 +39,7 @@ class SensorDataProcessor:
         self.sn = 0			#Satellite number
         self.pr = 0			#Power (Watts)
         self.cd = 0			#Power pedals cadence (RPM)
-        
+        self.tq = 0         #Power pedals torque (Nm)
         
         self.df = 0
         self.last_log = 0
@@ -48,12 +48,12 @@ class SensorDataProcessor:
         # Initialize expected data as a list for comparison in update_attributes function
         self.expected_data = ["c","l","r","cr",
                               "s","ts","sa","g","bg","rl","ph","yw","t","h",
-                              "p","bp","ba","la","lo","gs","al","sn","dt","pr", "cd"]      # Initialize port instances as class attribSute
+                              "p","bp","ba","la","lo","gs","al","sn","dt","pr", "cd" ,"tq"]      # Initialize port instances as class attribSute
         self.esphatch = 0
         self.espbike = 0
         self.espgear = 0
         self.defects = 0 # Variable for testing serial reading consistency when debugging
-        self.expected_ports = 3 # Sets the number of ports (1,2,3,4) needed to be detected before check_port_complete function returns True
+        self.expected_ports = 2 # Sets the number of ports (1,2,3,4) needed to be detected before check_port_complete function returns True
         
         # legend in order : central wheel=c, left wheel=l, right wheel=r, crank=cr, shaft=s, total speed=ts, gear set=g,
         # steering angle=sa, acceleration x=ax, acceleration y=ay, acceleration z=az, angular velocity x=vx, angular velocity y=vy
@@ -377,7 +377,7 @@ class SensorDataProcessor:
         esp_bike_dictkeys = ["c","l","r","s","cr","sa"]
         esp_gear_dictkeys = ["g","bg"]
         esp_hatch_dictkeys = ["rl","ph","yw","t","h", "p","bp","ba","la","lo","gs","al","sn"]
-        cal_data_dict = {"ts":self.ts, "dt":self.dt, "pr":self.pr, "cd":self.cd}
+        cal_data_dict = {"ts":self.ts, "dt":self.dt, "pr":self.pr, "cd":self.cd, "tq":self.tq}
         
         # Match list of dict keys to serial port list of data points
         while True:
