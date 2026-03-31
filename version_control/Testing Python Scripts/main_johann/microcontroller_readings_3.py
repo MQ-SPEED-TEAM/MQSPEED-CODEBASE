@@ -12,7 +12,7 @@ class SensorDataProcessor:
     """Takes data from all the sensors and packages them for either data logging, 
     screen display, or to send back to microcontrollers"""
 
-    def __init__(self, arg1, arg2) -> None:
+    def __init__(self) -> None:
         # initialize all expected data as class instance attributes
         self.c = 0    		#Center wheel speed (RPM)
         self.l = 0			#Left wheel speed (RPM)
