@@ -39,6 +39,7 @@ def system():
     BASE_PATH = '/home/mqspeed/Desktop/'
     f=open(BASE_PATH + 'Saves/Test_' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.csv', 'w')
     writer = csv.writer(f)
+    run_once = True
     
     
     
@@ -285,7 +286,11 @@ def system():
                 periodic_overlay_update()
                 
                 # run any calculations before this function is called
-                data_stream = 
+                if (run_once == True):
+                   data_stream = sensor_data_processor.expected_data()
+                   writer.writerow(data_stream)
+                   run_once = False
+                
                 data_stream = sensor_data_processor.process()
                 data_stream.insert(0, str(datetime.now().strftime('%H_%M_%S_%f'))[:-3])
                 
@@ -336,6 +341,8 @@ def system():
             distance_traveled=0
             sensor_data_processor.pr = 0
             sensor_data_processor.cd = 0
+            sensor_data_processor.tq = 0
+            
             print("Stopped transmitting data...")
             
             
