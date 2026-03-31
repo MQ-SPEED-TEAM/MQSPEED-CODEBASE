@@ -147,8 +147,11 @@ def system():
                          f"t: {sensor_data_processor.t}  p: {sensor_data_processor.p}  h: {sensor_data_processor.h}",
                          f"bp: {sensor_data_processor.bp}  ba: {sensor_data_processor.ba}  dt: {sensor_data_processor.dt}",
                          f"la: {sensor_data_processor.la}  lo: {sensor_data_processor.lo}  "
-                         f"gs: {sensor_data_processor.gs}  al: {sensor_data_processor.al}  sn: {sensor_data_processor.sn}"]
-        }
+                         f"gs: {sensor_data_processor.gs}  al: {sensor_data_processor.al}  sn: {sensor_data_processor.sn}" ,
+                         f"tq: {sensor_data_processor.tq}  cd: {sensor_data_processor.cd}   pr: {sensor_data_processor.pr}]   
+             }
+
+
 
         overlay_lines = overlay_dict.get(overlay_mode, ["Invalid overlay mode"])
 
@@ -229,7 +232,7 @@ def system():
             pedals_data = conn1.recv()
             sensor_data_processor.pr = pedals_data[0]
             sensor_data_processor.cd = pedals_data[1]
-            
+            sensor_data_processor.tq = pedals_data[2]
 
         if (millis - time_last >=distance_calculation_interval): #Calculate distance in m from speed
             calculated_times += 1
