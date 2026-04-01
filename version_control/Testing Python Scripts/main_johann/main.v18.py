@@ -35,11 +35,17 @@ def system():
     GPIO.setup(10, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Set pin 10 to be an input pin and set initial value to be pulled low (off)
     GPIO.setup(12, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
+   header = [
+   
+        "Timestamp", "c", "l", "r", "cr", "s", "ts", "sa", "g", "bg",             # defining header list 
+        "ax", "ay", "az", "vx", "vy", "vz", "t", "p", "h", "bp", "ba", "dt"
+]
+    
     powerstate = False
     BASE_PATH = '/home/mqspeed/Desktop/'
     f=open(BASE_PATH + 'Saves/Test_' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.csv', 'w')
     writer = csv.writer(f)
-    
+       writer.writerow(header)              # writing the headers list
     
     
     # start power multiprocess
@@ -334,6 +340,7 @@ def system():
             picam2.start_recording(encoder, video_filename)
             
             writer = csv.writer(f)
+               writer.writerow(header)              # writing the headers list
             #/////////////////////////Starting Camera and time/////////////////////////////// 
             #///////////////////////////////////////////////////////////////////////////////
             # (No annotation support here)
