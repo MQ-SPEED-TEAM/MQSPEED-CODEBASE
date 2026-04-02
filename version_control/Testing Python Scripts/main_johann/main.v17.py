@@ -286,7 +286,7 @@ def system():
                 
                 # run any calculations before this function is called
                 if (run_once == True):
-                   data_stream = sensor_data_processor.expected_data()
+                   data_stream = sensor_data_processor.expected_data
                    data_stream.insert(0,  str("Time Stamp"))
                    writer.writerow(data_stream)
                    run_once = False
