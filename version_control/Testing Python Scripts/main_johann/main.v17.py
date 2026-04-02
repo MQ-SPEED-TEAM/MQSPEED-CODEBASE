@@ -37,8 +37,7 @@ def system():
 
     powerstate = False
     BASE_PATH = '/home/mqspeed/Desktop/'
-    f=open(BASE_PATH + 'Saves/Test_' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.csv', 'w')
-    writer = csv.writer(f)
+ 
     run_once = True
     
     
@@ -288,6 +287,7 @@ def system():
                 # run any calculations before this function is called
                 if (run_once == True):
                    data_stream = sensor_data_processor.expected_data()
+                   data_stream.insert(0,  str("Time Stamp"))
                    writer.writerow(data_stream)
                    run_once = False
                 
