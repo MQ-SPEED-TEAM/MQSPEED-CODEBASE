@@ -190,19 +190,21 @@ def system():
     def update_overlay():
         global cached_overlay
         cached_overlay = generate_overlay()
-        try:
-            picam2.set_overlay(cached_overlay)
-        except RuntimeError:
-            pass
+        
+
+    def periodic_overlay_update():
+        global frame_counter
+        frame_counter += 1
+        if frame_counter % overlay_update_interval == 0:
+            update_overlay()
 
     # Periodically update overlay
     def apply_overlay(request):
-        global frame_counter, cached_overlay
+        global cached_overlay
 
-        frame_counter += 1
-        if cached_overlay is None or frame_counter % overlay_update_interval == 0:
-            update_overlay()
-
+        if cached_overlay is None:
+         return
+       
         with MappedArray(request, "main") as m:
             frame = m.array
 
@@ -281,6 +283,7 @@ def system():
             file_open = True
             video_filename = BASE_PATH + 'Camera Videos/Vid_ ' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.h264'
             print("Starting Camera back up")
+            update_overlay()
             picam2.start_preview(Preview.QTGL, x=0, y=0, width = 1024, height = 600)
             picam2.start()
             # picam2.start_preview(Preview.QTGL, x=0, y=0, width = 1024, height = 600)
