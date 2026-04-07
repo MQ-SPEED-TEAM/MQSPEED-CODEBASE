@@ -196,38 +196,38 @@ def system():
             pass
 
     # Periodically update overlay
-   def apply_overlay(request):
-    global frame_counter, cached_overlay
+    def apply_overlay(request):
+        global frame_counter, cached_overlay
 
-    frame_counter += 1
-    if cached_overlay is None or frame_counter % overlay_update_interval == 0:
-        update_overlay()
+        frame_counter += 1
+        if cached_overlay is None or frame_counter % overlay_update_interval == 0:
+            update_overlay()
 
-    with MappedArray(request, "main") as m:
-        frame = m.array
+        with MappedArray(request, "main") as m:
+            frame = m.array
 
-        overlay_h, overlay_w = cached_overlay.shape[:2]
-        frame_h, frame_w = frame.shape[:2]
+            overlay_h, overlay_w = cached_overlay.shape[:2]
+            frame_h, frame_w = frame.shape[:2]
 
         # bottom-center placement
-        x = max((frame_w - overlay_w) // 2, 0)
-        y = max(frame_h - overlay_h - 20, 0)
+            x = max((frame_w - overlay_w) // 2, 0)
+            y = max(frame_h - overlay_h - 20, 0)
 
         # clip if overlay is larger than frame
-        h = min(overlay_h, frame_h - y)
-        w = min(overlay_w, frame_w - x)
+            h = min(overlay_h, frame_h - y)
+            w = min(overlay_w, frame_w - x)
 
-        if h <= 0 or w <= 0:
-            return
+            if h <= 0 or w <= 0:
+                return
 
-        overlay_crop = cached_overlay[:h, :w]
-        alpha = overlay_crop[:, :, 3] / 255.0
+            overlay_crop = cached_overlay[:h, :w]
+            alpha = overlay_crop[:, :, 3] / 255.0
 
-        for c in range(3):
-            frame[y:y+h, x:x+w, c] = (
-                alpha * overlay_crop[:, :, c] +
-                (1 - alpha) * frame[y:y+h, x:x+w, c]
-            ).astype(np.uint8)
+            for c in range(3):
+                frame[y:y+h, x:x+w, c] = (
+                    alpha * overlay_crop[:, :, c] +
+                    (1 - alpha) * frame[y:y+h, x:x+w, c]
+                ).astype(np.uint8)
     
 
 # saving overlay to recordings causes video lag over time
