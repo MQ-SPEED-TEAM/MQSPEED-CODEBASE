@@ -270,11 +270,11 @@ void loop() {
    prev_output = millis();
    Serial.print("h");
    Serial.print(",");
-   Serial.print(roll, 2); 
+   Serial.print(averaged_roll, 2); 
    Serial.print(",");
-   Serial.print(pitch, 2); 
+   Serial.print(averaged_pitch, 2); 
    Serial.print(",");
-   Serial.print(yaw, 2); 
+   Serial.print(averaged_yaw, 2); 
    Serial.print(",");
    
    //print environment
