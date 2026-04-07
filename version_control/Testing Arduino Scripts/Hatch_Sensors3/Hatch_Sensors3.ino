@@ -37,6 +37,9 @@ Adafruit_GPS GPS(&Serial1);
 
 RunningAverage battery_pi_read(1000);
 RunningAverage battery_analog_read(1000);
+RunningAverage averaged_roll(100);
+RunningAverage averaged_pitch(100);
+RunningAverage averaged_yaw(100);
 
 //////////////////////////////////////////////I2C sensors///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -54,10 +57,9 @@ int x = 0;
 float heading = 0;
 float voltage_pi = 0;
 float voltage_analog = 0;
-float roll;
-float pitch;
-float yaw;
-
+float instant_roll;
+float instant_pitch;
+float instant_yaw;
 float qw;
 float qx;
 float qy;
@@ -116,6 +118,9 @@ void setup() {
   
   battery_pi_read.clear();
   battery_analog_read.clear();
+  averaged_roll.clear();
+  averaged_pitch.clear();
+  averaged_yaw.clear();
 
   
 ///////////////////////////////////////////TEMPERATURE SETUP/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -172,16 +177,46 @@ void loop() {
       qy = sensorValue.un.rotationVector.j;
       qz = sensorValue.un.rotationVector.k;
 
-      // Convert to Euler angles (degrees)
-      yaw   = atan2(2.0 * (qw * qz + qx * qy),
-                          1.0 - 2.0 * (qy * qy + qz * qz));
-      pitch = asin(2.0 * (qw * qy - qz * qx));
-      roll  = atan2(2.0 * (qw * qx + qy * qz),
-                          1.0 - 2.0 * (qx * qx + qy * qy));
+      // Quaternion from IMU
+      float qw_i = qw;
+      float qx_i = qx;
+      float qy_i = qy;
+      float qz_i = qz;
 
-      yaw   *= 180.0 / PI;
-      pitch *= 180.0 / PI;
-      roll  *= 180.0 / PI;
+      // Rotation quaternion for mounting orientation
+      const float s = -0.70710678; // -sqrt(2)/2
+      float qw_r = 0.0f;
+      float qx_r = s;
+      float qy_r = s;
+      float qz_r = 0.0f;
+
+      // Apply mounting correction
+      float qw_m = qw_r*qw_i - qx_r*qx_i - qy_r*qy_i - qz_r*qz_i;
+      float qx_m = qw_r*qx_i + qx_r*qw_i + qy_r*qz_i - qz_r*qy_i;
+      float qy_m = qw_r*qy_i - qx_r*qz_i + qy_r*qw_i + qz_r*qx_i;
+      float qz_m = qw_r*qz_i + qx_r*qy_i - qy_r*qx_i + qz_r*qw_i;
+
+      // Replace IMU quaternion with corrected one
+      qw = qw_m;
+      qx = qx_m;
+      qy = qy_m;
+      qz = qz_m;
+
+      // Convert to Euler angles (degrees)
+      instant_roll  = atan2(2.0 * (qw * qx + qy * qz),
+                          1.0 - 2.0 * (qx * qx + qy * qy));
+      instant_pitch = asin(2.0 * (qw * qy - qz * qx));
+      instant_yaw   = atan2(2.0 * (qw * qz + qx * qy),
+                          1.0 - 2.0 * (qy * qy + qz * qz));
+      
+      instant_roll  *= 180.0 / PI; //Rotation about X (forward+ and backwards- axis)
+      instant_pitch *= 180.0 / PI; //Rotation about Y (left+ and right- axis)
+      instant_yaw   *= 180.0 / PI; //Rotation about Z (up+ and down- axis)
+
+      averaged_roll.addValue(instant_roll);
+      averaged_pitch.addValue(instant_pitch);
+      averaged_yaw.addValue(instant_yaw);
+
       }
     }
  
