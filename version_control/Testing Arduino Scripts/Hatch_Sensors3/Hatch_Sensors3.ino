@@ -121,9 +121,9 @@ void setup() {
   
   battery_pi_read.clear();
   battery_analog_read.clear();
-  averaged_roll.clear();
-  averaged_pitch.clear();
-  averaged_yaw.clear();
+  averaged_roll_read.clear();
+  averaged_pitch_read.clear();
+  averaged_yaw_read.clear();
 
   
 ///////////////////////////////////////////TEMPERATURE SETUP/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
