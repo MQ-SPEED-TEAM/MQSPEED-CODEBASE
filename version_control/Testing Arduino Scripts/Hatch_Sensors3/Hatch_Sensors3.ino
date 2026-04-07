@@ -37,9 +37,9 @@ Adafruit_GPS GPS(&Serial1);
 
 RunningAverage battery_pi_read(1000);
 RunningAverage battery_analog_read(1000);
-RunningAverage averaged_roll(100);
-RunningAverage averaged_pitch(100);
-RunningAverage averaged_yaw(100);
+RunningAverage averaged_roll_read(100);
+RunningAverage averaged_pitch_read(100);
+RunningAverage averaged_yaw_read(100);
 
 //////////////////////////////////////////////I2C sensors///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -60,6 +60,9 @@ float voltage_analog = 0;
 float instant_roll;
 float instant_pitch;
 float instant_yaw;
+float average_roll = 0;
+float average_pitch = 0;
+float average_yaw = 0;
 float qw;
 float qx;
 float qy;
@@ -213,9 +216,13 @@ void loop() {
       instant_pitch *= 180.0 / PI; //Rotation about Y (left+ and right- axis)
       instant_yaw   *= 180.0 / PI; //Rotation about Z (up+ and down- axis)
 
-      averaged_roll.addValue(instant_roll);
-      averaged_pitch.addValue(instant_pitch);
-      averaged_yaw.addValue(instant_yaw);
+      averaged_roll_read.addValue(instant_roll);
+      averaged_pitch_read.addValue(instant_pitch);
+      averaged_yaw_read.addValue(instant_yaw);
+
+      average_roll = averaged_roll_read.getAverage();
+      average_pitch = averaged_pitch_read.getAverage();
+      average_yaw = averaged_yaw_read.getAverage();
 
       }
     }
@@ -270,11 +277,11 @@ void loop() {
    prev_output = millis();
    Serial.print("h");
    Serial.print(",");
-   Serial.print(averaged_roll, 2); 
+   Serial.print(average_roll, 2); 
    Serial.print(",");
-   Serial.print(averaged_pitch, 2); 
+   Serial.print(average_pitch, 2); 
    Serial.print(",");
-   Serial.print(averaged_yaw, 2); 
+   Serial.print(average_yaw, 2); 
    Serial.print(",");
    
    //print environment
