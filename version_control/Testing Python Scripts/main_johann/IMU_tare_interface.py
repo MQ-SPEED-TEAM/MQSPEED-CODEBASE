@@ -1,7 +1,6 @@
 import serial
 import time
 
-# Adjust this to HATCH ESP32 serial port (check in Arduino ports)
 PORT = "/dev/ttyUSB0"
 BAUD = 115200
 
@@ -11,9 +10,9 @@ def main():
     time.sleep(2)  # allow ESP32 to reset
 
     print("Connected. Type commands:")
-    print("  tare     → apply tareNow()")
-    print("  persist  → apply persistTare()")
-    print("  status   → ask ESP32 for confirmation")
+    print("  tare     → apply imu.tareNow()")
+    print("  persist  → apply imu.saveTare()")
+    print("  clear    → apply imu.clearTare()")
     print("  quit     → exit program")
 
     while True:
@@ -23,7 +22,7 @@ def main():
             print("Exiting.")
             break
 
-        if cmd in ["tare", "persist", "status"]:
+        if cmd in ["tare", "persist", "clear"]:
             ser.write((cmd + "\n").encode())
             ser.flush()
 
@@ -31,6 +30,7 @@ def main():
             time.sleep(0.1)
             while ser.in_waiting:
                 print("ESP32:", ser.readline().decode().strip())
+
         else:
             print("Unknown command.")
 
