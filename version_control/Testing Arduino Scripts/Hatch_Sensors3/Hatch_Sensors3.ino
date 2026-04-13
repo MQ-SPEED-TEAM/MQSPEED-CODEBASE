@@ -73,10 +73,11 @@ unsigned long lastRead=0;
 
 ////////////////////////////////////////////////////////PINS///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-const int set_A = 25;           //transciever aux
-const int set_B = 32;           //transciever aux
-const int aux = 33;             //transciever aux
+#define RXD2 16
+#define TXD2 17
+const int set_A =33;           //transciever m1
+const int set_B = 32;           //transciever mo
+//const int aux = 33;             //transciever aux
 #define LED 2                   //ESP led pin
 #define pi_bat 27                  //Pi battery
 #define backup_bat 26                  //Backup screen battery
@@ -95,7 +96,7 @@ void setup() {
   Serial.setTxBufferSize(SERIAL_BUFFER_SIZE);
   Serial.setRxBufferSize(SERIAL_BUFFER_SIZE);
   
-  Serial2.begin(115200, SERIAL_8N1, 16, 17);
+  Serial2.begin(115200, SERIAL_8N1, 17, 16);
   Serial2.setTxBufferSize(SERIAL_BUFFER_SIZE);
   Serial2.setRxBufferSize(SERIAL_BUFFER_SIZE);
 
@@ -107,7 +108,7 @@ void setup() {
   pinMode(set_A, OUTPUT);
   pinMode(set_B, OUTPUT);
   pinMode(LED,OUTPUT);
-  pinMode(aux, INPUT);
+//  pinMode(aux, INPUT);
   pinMode(backup_bat, INPUT);
   pinMode(pi_bat, INPUT);
   
@@ -273,21 +274,22 @@ void loop() {
    Serial.print("0\n");
    Serial.flush();
 
-
    /// Receieve from pi and send to transceiver
-   if(Serial2.available()>0){
+  if(Serial2.available()>0){
       command = Serial2.readStringUntil('\n');
       command.trim();
       if (command.equals("stop")) {
         Serial.print("stop");
         Serial.println();
+      //  Serial2.println("hello mark");
         Serial.flush();
         }
       }
-    if(Serial.available()>0 && !Serial2.available()>0){
+   if(Serial.available()>0 && !Serial2.available()>0){
       pi_data = Serial.readStringUntil('\n');
       pi_data.trim();
-      Serial2.print(pi_data);
+      Serial2.println(pi_data);
+      //Serial2.print("hello aaron");
       Serial2.println();
       Serial2.flush();
     }

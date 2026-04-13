@@ -113,7 +113,7 @@ def system():
 
     # Define overlay function
     # Overlay mode selection
-    overlay_mode = "analysis"
+    overlay_mode = "standard"
     # Text overlay settings
     
     def update_overlay_lines():
@@ -172,17 +172,17 @@ def system():
             frame = m.array
             # Text settings
             font = cv2.FONT_HERSHEY_SIMPLEX
-            scale = 1.0
-            thickness = 2
-            line_height = 26
+            scale = 1.7
+            thickness = 3
+            line_height = 36
             padding = 20
 
             frame_h, frame_w = frame.shape[:2]
 
             text_sizes = [cv2.getTextSize(line, font, scale, thickness)[0] for line in cached_lines]
             max_width = max(w for w, h in text_sizes) if text_sizes else 0
-            box_w = max_width + 40
-            box_h = len(cached_lines) * line_height + 20
+            box_w = max_width + 80
+            box_h = len(cached_lines) * line_height + 40
             box_x = max((frame_w - box_w) // 2, 0)
             box_y = max(frame_h - box_h - padding, 0)
 
@@ -198,7 +198,7 @@ def system():
             for i, line in enumerate(cached_lines):
                 text_width, _ = cv2.getTextSize(line, font, scale, thickness)[0]
                 text_x = max((frame_w - text_width) // 2, 0)
-                text_y = box_y + 25 + i * line_height
+                text_y = box_y + 50 + i * line_height
                 cv2.putText(frame, line, (text_x, text_y), font, scale, (255, 255, 255), thickness)
           
 

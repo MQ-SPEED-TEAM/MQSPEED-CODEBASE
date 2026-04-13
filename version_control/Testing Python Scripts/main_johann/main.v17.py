@@ -296,7 +296,7 @@ def system():
                 
                 writer.writerow(data_stream)
                 
-                if transmit_count >= 20:
+                if transmit_count >= 40:
                     transmit_count = 0
                     sensor_data_processor.transmit()
                  
