@@ -163,7 +163,9 @@ def system():
         scale = 1.0
         thickness = 2
         color_text = (255, 255, 255, 255)
-        color_bg = (0, 0, 0, 255)
+        #color_bg = (0, 0, 0, 255)
+        target_power = 200  # Set your goal here
+        current_power = sensor_data_processor.pr
 
         # Calculate text sizes
         text_sizes = [cv2.getTextSize(line, font, scale, thickness)[0] for line in overlay_lines]
@@ -178,9 +180,22 @@ def system():
         cv2.rectangle(overlay,
                       (box_x, box_y),
                       (box_x + max_width + 20, box_y + line_height * len(overlay_lines)),
-                      color_bg,
+                     # color_bg,
+                      if current_power >= target_power:
+                      # Green background if hitting target (B, G, Red, Alpha)
+                      color_bg = (0, 150, 0, 200) # Semi-transparent dark green
+                      elif current_power < (target_power - 10):
+                      # Red background if pedaling but under target
+                      color_bg = (0, 0, 150, 200) # Semi-transparent dark red
+                      else:
+                      # Standard black if not pedaling
+                      color_bg = (0, 0, 0, 255),
                       thickness=cv2.FILLED)
+        
 
+
+
+        
         # Draw each line
         for i, (line, (text_width, _)) in enumerate(zip(overlay_lines, text_sizes)):
             text_x = (overlay.shape[1] - text_width) // 2
