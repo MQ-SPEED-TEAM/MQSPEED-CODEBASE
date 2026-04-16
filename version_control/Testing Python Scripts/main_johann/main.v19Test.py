@@ -113,7 +113,7 @@ def system():
 
     # Define overlay function
     # Overlay mode selection
-    overlay_mode = "standard"
+    overlay_mode = "analysis"
     # Text overlay settings
     
     def update_overlay_lines():
@@ -160,7 +160,7 @@ def system():
 
 
     power_profile = [
-        (500, 200),
+        (500, 90),
         (1000, 300),
         (1500, 400),
         (2000, 250),
@@ -214,7 +214,7 @@ def system():
             #//////////// Power bar graphic ////////////
 
             bar_max_power = 1000
-            actual_power = max(0, sensor_data_processor.pr)
+            actual_power = max(0, sensor_data_processor.rl)
             target_power = max(0, get_power_target(sensor_data_processor.dt))
 
             # clamp values
@@ -228,7 +228,7 @@ def system():
 
 
             bar_x = frame_w // 2 - bar_width // 2
-            bar_y = frame_h // 2 - bar_height // 2 + 50
+            bar_y = frame_h // 2 
 
             fill_height = int((actual_clamped / bar_max_power) * bar_height)
             target_y = bar_y + bar_height - int((target_clamped / bar_max_power) * bar_height)
