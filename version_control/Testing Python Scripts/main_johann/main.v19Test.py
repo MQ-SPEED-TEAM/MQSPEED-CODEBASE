@@ -157,6 +157,21 @@ def system():
 
         cached_lines = overlay_dict.get(overlay_mode, ["Invalid overlay mode"])
 
+
+
+    power_profile = [
+        (500, 200),
+        (1000, 300),
+        (1500, 400),
+        (2000, 250),
+    ]
+
+    def get_power_target(distance):
+        for limit, power in power_profile:
+            if distance < limit:
+                return power
+        return power_profile[-1][1]
+
         
 
     
@@ -198,8 +213,8 @@ def system():
 
             #//////////// Power bar graphic ////////////
 
-            max_power = 1000
-            actual_power = max(0, sensor_dataprocessor.pr)
+            bar_max_power = 1000
+            actual_power = max(0, sensor_data_processor.pr)
             target_power = max(0, get_power_target(sensor_data_processor.dt))
 
             # clamp values
