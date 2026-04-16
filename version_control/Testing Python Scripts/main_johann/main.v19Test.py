@@ -228,10 +228,20 @@ def system():
 
 
             bar_x = frame_w // 2 - bar_width // 2
-            bar_y = frame_h // 2 - bar_height // 2
+            bar_y = frame_h // 2 - bar_height // 2 + 50
 
             fill_height = int((actual_clamped / bar_max_power) * bar_height)
             target_y = bar_y + bar_height - int((target_clamped / bar_max_power) * bar_height)
+
+            
+            if actual_power  < target_power - 20:
+                bar_color = (0,0,255)
+
+            elif actual_power  > target_power + 20:
+                bar_color = (0,255,0)
+
+            else:
+                bar_color = (255,0,0)
 
 
             cv2.rectangle(
@@ -246,7 +256,7 @@ def system():
                 frame,
                 (bar_x, bar_y + bar_height - fill_height),
                 (bar_x + bar_width, bar_y + bar_height),
-                (0, 255, 0),
+                bar_color,
                 cv2.FILLED
             )
 
@@ -254,14 +264,12 @@ def system():
                 frame,
                 (bar_x - 10, target_y),
                 (bar_x + bar_width + 10, target_y),
-                (0, 0, 255),
+                (255, 255, 255),
                 3
             )
-            
-
-            
 
 
+     
 
             
             # text
