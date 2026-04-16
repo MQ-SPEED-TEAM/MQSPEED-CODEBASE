@@ -113,7 +113,7 @@ def system():
 
     # Define overlay function
     # Overlay mode selection
-    overlay_mode = "analysis"
+    overlay_mode = "standard"
     # Text overlay settings
     
     def update_overlay_lines():
@@ -230,16 +230,16 @@ def system():
 
 
             bar_x = frame_w // 2 - bar_width // 2
-            bar_y = frame_h // 2 
+            bar_y = frame_h // 2 + 250 
 
             
             
             #Colour changes
-            if actual_power  < target_power - 20:
+            if actual_power  < target_power -10:
                 bar_colour = (0,0,255)
 
-            elif actual_power  > target_power + 20:
-                bar_colour = (00,0)
+            elif actual_power  > target_power + 5:
+                bar_colour = (255,0,0)
 
             else:
                 bar_colour = (0,255,0)
@@ -263,8 +263,8 @@ def system():
 
 
             # triangle at top of bar
-            triangle_height = 18
-            triangle_half_width = 14
+            triangle_height = 52
+            triangle_half_width = 40
 
             triangle_points = np.array([
                 [bar_x + bar_width // 2, bar_y - triangle_height],
