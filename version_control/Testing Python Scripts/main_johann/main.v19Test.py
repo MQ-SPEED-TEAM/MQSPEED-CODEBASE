@@ -213,35 +213,36 @@ def system():
 
             #//////////// Power bar graphic ////////////
 
-            bar_max_power = 1000
-            actual_power = max(0, sensor_data_processor.rl)
-            target_power = max(0, get_power_target(sensor_data_processor.dt))
-
-            # clamp values
-            actual_clamped = min(actual_power, bar_max_power)
-            target_clamped = min(target_power, bar_max_power)
-
-
             #Bar size and position
             bar_height = 200 
-            bar_width = 30
+            bar_width = 50
+
+            bar_max_power = 1000
+            actual_power = max(0, sensor_data_processor.rl)
+            target_power = max(1, get_power_target(sensor_data_processor.dt))
+            fill_ratio = min(actual_power / target_power, 1.0)
+            fill_height = int(fill_ratio * bar_height)
+
+           
+
+
+           
 
 
             bar_x = frame_w // 2 - bar_width // 2
             bar_y = frame_h // 2 
 
-            fill_height = int((actual_clamped / bar_max_power) * bar_height)
-            target_y = bar_y + bar_height - int((target_clamped / bar_max_power) * bar_height)
-
             
+            
+            #Colour changes
             if actual_power  < target_power - 20:
-                bar_color = (0,0,255)
+                bar_colour = (0,0,255)
 
             elif actual_power  > target_power + 20:
-                bar_color = (0,255,0)
+                bar_colour = (0,255,0)
 
             else:
-                bar_color = (255,0,0)
+                bar_colour = (255,0,0)
 
 
             cv2.rectangle(
@@ -256,22 +257,24 @@ def system():
                 frame,
                 (bar_x, bar_y + bar_height - fill_height),
                 (bar_x + bar_width, bar_y + bar_height),
-                bar_color,
+                bar_colour,
                 cv2.FILLED
             )
 
-            cv2.line(
-                frame,
-                (bar_x - 10, target_y),
-                (bar_x + bar_width + 10, target_y),
-                (255, 255, 255),
-                3
-            )
 
+            # triangle at top of bar
+            triangle_height = 18
+            triangle_half_width = 14
 
-     
+            triangle_points = np.array([
+                [bar_x + bar_width // 2, bar_y - triangle_height],
+                [bar_x + bar_width // 2 - triangle_half_width, bar_y],
+                [bar_x + bar_width // 2 + triangle_half_width, bar_y],
+            ], dtype=np.int32)
 
-            
+            cv2.fillPoly(frame, [triangle_points], bar_colour)
+
+  
             # text
             for i, line in enumerate(cached_lines):
                 text_width, _ = cv2.getTextSize(line, font, scale, thickness)[0]
