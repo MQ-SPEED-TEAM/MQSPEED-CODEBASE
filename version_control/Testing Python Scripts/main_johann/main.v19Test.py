@@ -160,7 +160,7 @@ def system():
         
 
     
-    # Periodically update overlay
+    # Applying Overlay 
     def apply_overlay(request):
         global frame_counter, cached_lines
 
@@ -194,12 +194,72 @@ def system():
                 (0, 0, 0),
                 cv2.FILLED
             )
+
+
+            #//////////// Power bar graphic ////////////
+
+            max_power = 1000
+            actual_power = max(0, sensor_dataprocessor.pr)
+            target_power = max(0, get_power_target(sensor_data_processor.dt))
+
+            # clamp values
+            actual_clamped = min(actual_power, bar_max_power)
+            target_clamped = min(target_power, bar_max_power)
+
+
+            #Bar size and position
+            bar_height = 200 
+            bar_width = 30
+
+
+            bar_x = frame_w // 2 - bar_width // 2
+            bar_y = frame_h // 2 - bar_height // 2
+
+            fill_height = int((actual_clamped / bar_max_power) * bar_height)
+            target_y = bar_y + bar_height - int((target_clamped / bar_max_power) * bar_height)
+
+
+            cv2.rectangle(
+                frame,
+                (bar_x, bar_y),
+                (bar_x + bar_width, bar_y + bar_height),
+                (255, 255, 255),
+                2
+            )
+
+            cv2.rectangle(
+                frame,
+                (bar_x, bar_y + bar_height - fill_height),
+                (bar_x + bar_width, bar_y + bar_height),
+                (0, 255, 0),
+                cv2.FILLED
+            )
+
+            cv2.line(
+                frame,
+                (bar_x - 10, target_y),
+                (bar_x + bar_width + 10, target_y),
+                (0, 0, 255),
+                3
+            )
+            
+
+            
+
+
+
+            
             # text
             for i, line in enumerate(cached_lines):
                 text_width, _ = cv2.getTextSize(line, font, scale, thickness)[0]
                 text_x = max((frame_w - text_width) // 2, 0)
                 text_y = box_y + 50 + i * line_height
                 cv2.putText(frame, line, (text_x, text_y), font, scale, (255, 255, 255), thickness)
+                
+                
+
+
+      
           
 
   
