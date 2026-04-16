@@ -239,10 +239,10 @@ def system():
                 bar_colour = (0,0,255)
 
             elif actual_power  > target_power + 20:
-                bar_colour = (0,255,0)
+                bar_colour = (00,0)
 
             else:
-                bar_colour = (255,0,0)
+                bar_colour = (0,255,0)
 
 
             cv2.rectangle(
