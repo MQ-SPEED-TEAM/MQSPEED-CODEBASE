@@ -4,79 +4,25 @@
 #define SDA_PIN 21
 #define SCL_PIN 22
 
-// Use your ESP32 pins for INT/RST if needed, or disable with -1
 #define BNO08X_INT  -1
 #define BNO08X_RST  -1
 
 BNO08x imu;
-sh2_SensorValue_t sensorValue;
-
-// Orientation variables
-float qw, qx, qy, qz;
-float instant_roll, instant_pitch, instant_yaw;
-
-void computeOrientation() {
-  // Check if a new event is available
-  if (!imu.getSensorEvent(&sensorValue)) return;
-
-  // Only process rotation vector
-  if (imu.getSensorEventID() != SENSOR_REPORTID_ROTATION_VECTOR) return;
-
-  // CEVA rotation vector quaternion
-  qw = sensorValue.un.rotationVector.real;
-  qx = sensorValue.un.rotationVector.i;
-  qy = sensorValue.un.rotationVector.j;
-  qz = sensorValue.un.rotationVector.k;
-
-  // === MQSPEED mounting correction ===
-  float qw_i = qw;
-  float qx_i = qx;
-  float qy_i = qy;
-  float qz_i = qz;
-
-  const float s = -0.70710678; // -sqrt(2)/2
-  float qw_r = 0.0f;
-  float qx_r = s;
-  float qy_r = s;
-  float qz_r = 0.0f;
-
-  float qw_m = qw_r*qw_i - qx_r*qx_i - qy_r*qy_i - qz_r*qz_i;
-  float qx_m = qw_r*qx_i + qx_r*qw_i + qy_r*qz_i - qz_r*qy_i;
-  float qy_m = qw_r*qy_i - qx_r*qz_i + qy_r*qw_i + qz_r*qx_i;
-  float qz_m = qw_r*qz_i + qx_r*qy_i - qy_r*qx_i + qz_r*qw_i;
-
-  qw = qw_m;
-  qx = qx_m;
-  qy = qy_m;
-  qz = qz_m;
-
-  // === MQSPEED Euler conversion ===
-  instant_roll  = atan2(2.0 * (qw*qx + qy*qz),
-                        1.0 - 2.0 * (qx*qx + qy*qy));
-  instant_pitch = asin(2.0 * (qw*qy - qz*qx));
-  instant_yaw   = atan2(2.0 * (qw*qz + qx*qy),
-                        1.0 - 2.0 * (qy*qy + qz*qz));
-
-  instant_roll  *= 180.0 / PI;
-  instant_pitch *= 180.0 / PI;
-  instant_yaw   *= 180.0 / PI;
-}
 
 void setup() {
   Serial.begin(115200);
   delay(300);
 
   Wire.begin(SDA_PIN, SCL_PIN);
-  Wire.setClock(400000);   // CEVA driver expects fast I2C
+  Wire.setClock(400000);
 
-  delay(300); // FSM300 boot time
+  delay(300);
 
   if (!imu.begin(BNO08X_DEFAULT_ADDRESS, Wire, BNO08X_INT, BNO08X_RST)) {
     Serial.println("IMU not detected!");
     while (1) delay(10);
   }
 
-  // Enable rotation vector at default rate
   if (!imu.enableRotationVector()) {
     Serial.println("Failed to enable rotation vector");
   }
@@ -103,18 +49,27 @@ void loop() {
       Serial.println("OK: tare cleared");
     }
     else if (cmd == "orientation") {
-      computeOrientation();
-      Serial.print("roll=");
-      Serial.print(instant_roll, 2);
-      Serial.print(", pitch=");
-      Serial.print(instant_pitch, 2);
-      Serial.print(", yaw=");
-      Serial.println(instant_yaw, 2);
+
+      if (imu.getSensorEvent() == true) {
+        if (imu.getSensorEventID() == SENSOR_REPORTID_ROTATION_VECTOR) {
+
+          float roll  = imu.getRoll()  * 180.0 / PI;
+          float pitch = imu.getPitch() * 180.0 / PI;
+          float yaw   = imu.getYaw()   * 180.0 / PI;
+
+          Serial.print("roll=");
+          Serial.print(roll, 2);
+          Serial.print(", pitch=");
+          Serial.print(pitch, 2);
+          Serial.print(", yaw=");
+          Serial.println(yaw, 2);
+        }
+      }
     }
     else {
       Serial.println("ERR: unknown command");
     }
   }
 
-  // No dataAvailable() in CEVA API — getSensorEvent() handles SH-2 polling internally
+  // No dataAvailable() in this library
 }
