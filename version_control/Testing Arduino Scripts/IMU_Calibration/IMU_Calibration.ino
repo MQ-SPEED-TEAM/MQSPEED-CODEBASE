@@ -1,24 +1,27 @@
 #include <Wire.h>
 #include <Adafruit_BNO08x.h>
 
-// ===== I2C pins (match MQSpeed code) =====
+// ===== I2C PINS (match MQSpeed) =====
 #define SDA_PIN 21
 #define SCL_PIN 22
 
-// ===== SH-2 Tare Command Constants =====
+// Optional pins (same as your code)
+#define BNO08X_INT -1
+#define BNO08X_RST -1
+
+// SH-2 tare command constants
 #define SHTP_REPORT_COMMAND_REQUEST 0xF2
 #define COMMAND_TARE                0x03
 #define TARE_AXIS_ALL               0x07
 #define TARE_PERSIST                0x01
 
-Adafruit_BNO08x imu(BNO08X_RST);
+Adafruit_BNO08x bno08x(BNO08X_RST);
 sh2_SensorValue_t sensorValue;
 
 // Orientation variables
 float qw, qx, qy, qz;
 float instant_roll, instant_pitch, instant_yaw;
 
-// ===== Send CEVA SH-2 Tare Command =====
 void sendTareCommand(uint8_t axes, bool persist) {
   uint8_t packet[6];
   packet[0] = SHTP_REPORT_COMMAND_REQUEST;
@@ -28,46 +31,45 @@ void sendTareCommand(uint8_t axes, bool persist) {
   packet[4] = 0x00;
   packet[5] = 0x00;
 
-  imu.sendPacket(packet, sizeof(packet));
+  bno08x.sendPacket(packet, sizeof(packet));
 }
 
-// ===== Compute roll/pitch/yaw EXACTLY like Hatch_Sensors3.ino =====
 void computeOrientation() {
-  if (!imu.getSensorEvent(&sensorValue)) return;
+  if (!bno08x.getSensorEvent(&sensorValue)) return;
   if (sensorValue.sensorId != SH2_ROTATION_VECTOR) return;
 
-  // Raw quaternion
   qw = sensorValue.un.rotationVector.real;
   qx = sensorValue.un.rotationVector.i;
   qy = sensorValue.un.rotationVector.j;
   qz = sensorValue.un.rotationVector.k;
 
-  // ===== Apply your mounting correction quaternion =====
-  // From Hatch_Sensors3.ino (s = -sqrt(2)/2)
-  const float s = -0.70710678;
+  // Mounting correction (exactly your code)
+  float qw_i = qw;
+  float qx_i = qx;
+  float qy_i = qy;
+  float qz_i = qz;
+
+  const float s = -0.70710678; // -sqrt(2)/2
   float qw_r = 0.0f;
   float qx_r = s;
   float qy_r = s;
   float qz_r = 0.0f;
 
-  float qw_m = qw_r*qw - qx_r*qx - qy_r*qy - qz_r*qz;
-  float qx_m = qw_r*qx + qx_r*qw + qy_r*qz - qz_r*qy;
-  float qy_m = qw_r*qy - qx_r*qz + qy_r*qw + qz_r*qx;
-  float qz_m = qw_r*qz + qx_r*qy - qy_r*qx + qz_r*qw;
+  float qw_m = qw_r*qw_i - qx_r*qx_i - qy_r*qy_i - qz_r*qz_i;
+  float qx_m = qw_r*qx_i + qx_r*qw_i + qy_r*qz_i - qz_r*qy_i;
+  float qy_m = qw_r*qy_i - qx_r*qz_i + qy_r*qw_i + qz_r*qx_i;
+  float qz_m = qw_r*qz_i + qx_r*qy_i - qy_r*qx_i + qz_r*qw_i;
 
   qw = qw_m;
   qx = qx_m;
   qy = qy_m;
   qz = qz_m;
 
-  // ===== Convert to Euler (same formulas as MQSpeed) =====
-  instant_roll  = atan2(2.0 * (qw*qx + qy*qz),
-                        1.0 - 2.0 * (qx*qx + qy*qy));
-
-  instant_pitch = asin(2.0 * (qw*qy - qz*qx));
-
-  instant_yaw   = atan2(2.0 * (qw*qz + qx*qy),
-                        1.0 - 2.0 * (qy*qy + qz*qz));
+  instant_roll  = atan2(2.0 * (qw * qx + qy * qz),
+                        1.0 - 2.0 * (qx * qx + qy * qy));
+  instant_pitch = asin(2.0 * (qw * qy - qz * qx));
+  instant_yaw   = atan2(2.0 * (qw * qz + qx * qy),
+                        1.0 - 2.0 * (qy * qy + qz * qz));
 
   instant_roll  *= 180.0 / PI;
   instant_pitch *= 180.0 / PI;
@@ -85,13 +87,16 @@ void setup() {
   Wire.setClock(100000);
   delay(500);
 
-  if (!imu.begin_I2C()) {
+  if (!bno08x.begin_I2C()) {
     Serial.println("IMU not detected!");
     while (1) delay(10);
   }
   delay(300);
 
-  imu.enableReport(SH2_ROTATION_VECTOR, 10000); // 10ms
+  if (!bno08x.enableReport(SH2_ROTATION_VECTOR, 10000)) {
+    Serial.println("Failed to enable rotation vector");
+  }
+
   Serial.println("IMU detected.");
   Serial.println("Ready.");
 }
@@ -106,17 +111,14 @@ void loop() {
     sendTareCommand(TARE_AXIS_ALL, false);
     Serial.println("OK: tare applied");
   }
-
   else if (cmd == "persist") {
     sendTareCommand(TARE_AXIS_ALL, true);
     Serial.println("OK: tare persisted");
   }
-
   else if (cmd == "clear") {
     sendTareCommand(0x00, true);
     Serial.println("OK: tare cleared");
   }
-
   else if (cmd == "orientation") {
     computeOrientation();
     Serial.print("roll=");
@@ -126,7 +128,6 @@ void loop() {
     Serial.print(", yaw=");
     Serial.println(instant_yaw, 2);
   }
-
   else {
     Serial.println("ERR: unknown command");
   }
