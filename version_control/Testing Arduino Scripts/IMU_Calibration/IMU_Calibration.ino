@@ -1,71 +1,24 @@
 #include <Wire.h>
-#include <Adafruit_BNO08x.h>
+#include <SparkFun_BNO080_Arduino_Library.h>
 
-// ===== I2C pins (match MQSPEED) =====
 #define SDA_PIN 21
 #define SCL_PIN 22
 
-// Optional pins (same as MQSPEED)
-#define BNO08X_INT -1
-#define BNO08X_RST -1
+BNO080 imu;
 
-// ===== SH-2 Command Constants (CEVA FSM300) =====
-#define SHTP_REPORT_COMMAND_REQUEST 0xF2
-#define COMMAND_TARE                0x03
-#define TARE_AXIS_ALL               0x07
-#define TARE_PERSIST                0x01
-
-// ======================================================
-//  WRAPPER SUBCLASS TO EXPOSE _sendPacket()
-// ======================================================
-class BNO08x_CEVA : public Adafruit_BNO08x {
-public:
-  BNO08x_CEVA(int8_t rst) : Adafruit_BNO08x(rst) {}
-
-  // Expose the private _sendPacket() safely
-  bool sendRawPacket(uint8_t *buffer, uint8_t length) {
-    return this->_sendPacket(buffer, length);
-  }
-};
-
-// Replace your instance with the wrapper
-BNO08x_CEVA bno08x(BNO08X_RST);
-
-sh2_SensorValue_t sensorValue;
-
-// Orientation variables
+// Quaternion + orientation variables
 float qw, qx, qy, qz;
 float instant_roll, instant_pitch, instant_yaw;
 
-// ======================================================
-//  SEND CEVA SH-2 TARE COMMAND
-// ======================================================
-void sendTareCommand(bool persist) {
-  uint8_t packet[6];
-  packet[0] = SHTP_REPORT_COMMAND_REQUEST;
-  packet[1] = COMMAND_TARE;
-  packet[2] = TARE_AXIS_ALL;
-  packet[3] = persist ? TARE_PERSIST : 0x00;
-  packet[4] = 0x00;
-  packet[5] = 0x00;
-
-  bno08x.sendRawPacket(packet, sizeof(packet));
-}
-
-// ======================================================
-//  ORIENTATION CALCULATION (EXACT MQSPEED MATH)
-// ======================================================
 void computeOrientation() {
-  if (!bno08x.getSensorEvent(&sensorValue)) return;
-  if (sensorValue.sensorId != SH2_ROTATION_VECTOR) return;
+  if (!imu.dataAvailable()) return;
 
-  // Raw quaternion
-  qw = sensorValue.un.rotationVector.real;
-  qx = sensorValue.un.rotationVector.i;
-  qy = sensorValue.un.rotationVector.j;
-  qz = sensorValue.un.rotationVector.k;
+  qw = imu.getQuatReal();
+  qx = imu.getQuatI();
+  qy = imu.getQuatJ();
+  qz = imu.getQuatK();
 
-  // Mounting correction quaternion (your exact math)
+  // === MQSPEED mounting correction ===
   float qw_i = qw;
   float qx_i = qx;
   float qy_i = qy;
@@ -87,7 +40,7 @@ void computeOrientation() {
   qy = qy_m;
   qz = qz_m;
 
-  // Convert to Euler (your exact MQSPEED formulas)
+  // === MQSPEED Euler conversion ===
   instant_roll  = atan2(2.0 * (qw*qx + qy*qz),
                         1.0 - 2.0 * (qx*qx + qy*qy));
   instant_pitch = asin(2.0 * (qw*qy - qz*qx));
@@ -99,63 +52,56 @@ void computeOrientation() {
   instant_yaw   *= 180.0 / PI;
 }
 
-// ======================================================
-//  SETUP
-// ======================================================
 void setup() {
   Serial.begin(115200);
-  delay(700);
-
-  Serial.println("FSM300 Calibration + Orientation Interface");
-  Serial.println("Commands: tare | persist | clear | orientation");
+  delay(300);
 
   Wire.begin(SDA_PIN, SCL_PIN);
-  Wire.setClock(100000);
-  delay(500);
+  Wire.setClock(400000);   // REQUIRED for SparkFun SH-2
 
-  if (!bno08x.begin_I2C()) {
+  delay(300); // FSM300 boot time
+
+  if (!imu.begin()) {
     Serial.println("IMU not detected!");
     while (1) delay(10);
   }
-  delay(300);
 
-  bno08x.enableReport(SH2_ROTATION_VECTOR, 10000);
+  imu.enableRotationVector(10); // 10ms = 100Hz
 
-  Serial.println("IMU detected.");
-  Serial.println("Ready.");
+  Serial.println("FSM300 SparkFun Calibration Interface Ready");
+  Serial.println("Commands: tare | persist | clear | orientation");
 }
 
-// ======================================================
-//  LOOP
-// ======================================================
 void loop() {
-  if (!Serial.available()) return;
+  if (Serial.available()) {
+    String cmd = Serial.readStringUntil('\n');
+    cmd.trim();
 
-  String cmd = Serial.readStringUntil('\n');
-  cmd.trim();
+    if (cmd == "tare") {
+      imu.tareNow();
+      Serial.println("OK: tare applied");
+    }
+    else if (cmd == "persist") {
+      imu.saveTare();
+      Serial.println("OK: tare persisted");
+    }
+    else if (cmd == "clear") {
+      imu.clearTare();
+      Serial.println("OK: tare cleared");
+    }
+    else if (cmd == "orientation") {
+      computeOrientation();
+      Serial.print("roll=");
+      Serial.print(instant_roll, 2);
+      Serial.print(", pitch=");
+      Serial.print(instant_pitch, 2);
+      Serial.print(", yaw=");
+      Serial.println(instant_yaw, 2);
+    }
+    else {
+      Serial.println("ERR: unknown command");
+    }
+  }
 
-  if (cmd == "tare") {
-    sendTareCommand(false);
-    Serial.println("OK: tare applied");
-  }
-  else if (cmd == "persist") {
-    sendTareCommand(true);
-    Serial.println("OK: tare persisted");
-  }
-  else if (cmd == "clear") {
-    sendTareCommand(true);  // CEVA clears by persisting zeroed axes
-    Serial.println("OK: tare cleared");
-  }
-  else if (cmd == "orientation") {
-    computeOrientation();
-    Serial.print("roll=");
-    Serial.print(instant_roll, 2);
-    Serial.print(", pitch=");
-    Serial.print(instant_pitch, 2);
-    Serial.print(", yaw=");
-    Serial.println(instant_yaw, 2);
-  }
-  else {
-    Serial.println("ERR: unknown command");
-  }
+  imu.dataAvailable(); // keep SH-2 packets flowing
 }
