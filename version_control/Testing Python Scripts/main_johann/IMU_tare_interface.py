@@ -29,7 +29,7 @@ def main():
             print("Exiting.")
             break
 
-        if cmd in ["tare", "persist", "clear"]:
+        if cmd in ["tare", "persist", "clear", "orientation"]:
             ser.write((cmd + "\n").encode())
             ser.flush()
 
