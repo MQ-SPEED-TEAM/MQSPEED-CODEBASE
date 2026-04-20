@@ -4,20 +4,29 @@
 #define SDA_PIN 21
 #define SCL_PIN 22
 
+// Use your ESP32 pins for INT/RST if needed, or disable with -1
+#define BNO08X_INT  -1
+#define BNO08X_RST  -1
+
 BNO08x imu;
+sh2_SensorValue_t sensorValue;
 
 // Orientation variables
 float qw, qx, qy, qz;
 float instant_roll, instant_pitch, instant_yaw;
 
 void computeOrientation() {
-  if (!imu.dataAvailable()) return;
+  // Check if a new event is available
+  if (!imu.getSensorEvent(&sensorValue)) return;
 
-  // Raw quaternion from SparkFun SH-2 driver
-  qw = imu.getQuatReal();
-  qx = imu.getQuatI();
-  qy = imu.getQuatJ();
-  qz = imu.getQuatK();
+  // Only process rotation vector
+  if (imu.getSensorEventID() != SENSOR_REPORTID_ROTATION_VECTOR) return;
+
+  // CEVA rotation vector quaternion
+  qw = sensorValue.un.rotationVector.real;
+  qx = sensorValue.un.rotationVector.i;
+  qy = sensorValue.un.rotationVector.j;
+  qz = sensorValue.un.rotationVector.k;
 
   // === MQSPEED mounting correction ===
   float qw_i = qw;
@@ -58,19 +67,21 @@ void setup() {
   delay(300);
 
   Wire.begin(SDA_PIN, SCL_PIN);
-  Wire.setClock(400000);   // REQUIRED for SparkFun SH-2 library
+  Wire.setClock(400000);   // CEVA driver expects fast I2C
 
   delay(300); // FSM300 boot time
 
-  if (!imu.begin()) {
+  if (!imu.begin(BNO08X_DEFAULT_ADDRESS, Wire, BNO08X_INT, BNO08X_RST)) {
     Serial.println("IMU not detected!");
     while (1) delay(10);
   }
 
-  // Enable rotation vector at 100 Hz (10 ms)
-  imu.enableRotationVector(10);
+  // Enable rotation vector at default rate
+  if (!imu.enableRotationVector()) {
+    Serial.println("Failed to enable rotation vector");
+  }
 
-  Serial.println("FSM300 SparkFun Calibration Interface Ready");
+  Serial.println("FSM300 CEVA Calibration Interface Ready");
   Serial.println("Commands: tare | persist | clear | orientation");
 }
 
@@ -105,5 +116,5 @@ void loop() {
     }
   }
 
-  imu.dataAvailable(); // keep SH-2 packets flowing
+  // No dataAvailable() in CEVA API — getSensorEvent() handles SH-2 polling internally
 }
