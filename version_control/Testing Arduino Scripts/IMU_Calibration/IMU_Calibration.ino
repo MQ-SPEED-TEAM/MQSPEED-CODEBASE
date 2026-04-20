@@ -1,19 +1,13 @@
 #include <Wire.h>
 #include <Adafruit_BNO08x.h>
 
-// ===== I2C PINS (match MQSpeed) =====
+// ===== I2C pins (match MQSpeed) =====
 #define SDA_PIN 21
 #define SCL_PIN 22
 
-// Optional pins (same as your code)
+// Optional pins (same as MQSpeed)
 #define BNO08X_INT -1
 #define BNO08X_RST -1
-
-// SH-2 tare command constants
-#define SHTP_REPORT_COMMAND_REQUEST 0xF2
-#define COMMAND_TARE                0x03
-#define TARE_AXIS_ALL               0x07
-#define TARE_PERSIST                0x01
 
 Adafruit_BNO08x bno08x(BNO08X_RST);
 sh2_SensorValue_t sensorValue;
@@ -22,18 +16,17 @@ sh2_SensorValue_t sensorValue;
 float qw, qx, qy, qz;
 float instant_roll, instant_pitch, instant_yaw;
 
-void sendTareCommand(uint8_t axes, bool persist) {
-  uint8_t packet[6];
-  packet[0] = SHTP_REPORT_COMMAND_REQUEST;
-  packet[1] = COMMAND_TARE;
-  packet[2] = axes;
-  packet[3] = persist ? TARE_PERSIST : 0x00;
-  packet[4] = 0x00;
-  packet[5] = 0x00;
+// ===== Send CEVA SH-2 Tare Command using Adafruit API =====
+void sendTare(bool persist) {
+  sh2_Command_t cmd;
+  cmd.command = SH2_CMD_TARE;
+  cmd.persistent = persist ? 1 : 0;
+  cmd.tareAxes = SH2_TARE_AXIS_ALL;
 
-  bno08x.sendPacket(packet, sizeof(packet));
+  bno08x.sendCommand(&cmd);
 }
 
+// ===== Compute orientation exactly like MQSpeed =====
 void computeOrientation() {
   if (!bno08x.getSensorEvent(&sensorValue)) return;
   if (sensorValue.sensorId != SH2_ROTATION_VECTOR) return;
@@ -43,13 +36,13 @@ void computeOrientation() {
   qy = sensorValue.un.rotationVector.j;
   qz = sensorValue.un.rotationVector.k;
 
-  // Mounting correction (exactly your code)
+  // Mounting correction (your exact math)
   float qw_i = qw;
   float qx_i = qx;
   float qy_i = qy;
   float qz_i = qz;
 
-  const float s = -0.70710678; // -sqrt(2)/2
+  const float s = -0.70710678;
   float qw_r = 0.0f;
   float qx_r = s;
   float qy_r = s;
@@ -65,11 +58,11 @@ void computeOrientation() {
   qy = qy_m;
   qz = qz_m;
 
-  instant_roll  = atan2(2.0 * (qw * qx + qy * qz),
-                        1.0 - 2.0 * (qx * qx + qy * qy));
-  instant_pitch = asin(2.0 * (qw * qy - qz * qx));
-  instant_yaw   = atan2(2.0 * (qw * qz + qx * qy),
-                        1.0 - 2.0 * (qy * qy + qz * qz));
+  instant_roll  = atan2(2.0 * (qw*qx + qy*qz),
+                        1.0 - 2.0 * (qx*qx + qy*qy));
+  instant_pitch = asin(2.0 * (qw*qy - qz*qx));
+  instant_yaw   = atan2(2.0 * (qw*qz + qx*qy),
+                        1.0 - 2.0 * (qy*qy + qz*qz));
 
   instant_roll  *= 180.0 / PI;
   instant_pitch *= 180.0 / PI;
@@ -93,9 +86,7 @@ void setup() {
   }
   delay(300);
 
-  if (!bno08x.enableReport(SH2_ROTATION_VECTOR, 10000)) {
-    Serial.println("Failed to enable rotation vector");
-  }
+  bno08x.enableReport(SH2_ROTATION_VECTOR, 10000);
 
   Serial.println("IMU detected.");
   Serial.println("Ready.");
@@ -108,15 +99,15 @@ void loop() {
   cmd.trim();
 
   if (cmd == "tare") {
-    sendTareCommand(TARE_AXIS_ALL, false);
+    sendTare(false);
     Serial.println("OK: tare applied");
   }
   else if (cmd == "persist") {
-    sendTareCommand(TARE_AXIS_ALL, true);
+    sendTare(true);
     Serial.println("OK: tare persisted");
   }
   else if (cmd == "clear") {
-    sendTareCommand(0x00, true);
+    sendTare(true);  // CEVA uses persistent tare with zero axes to clear
     Serial.println("OK: tare cleared");
   }
   else if (cmd == "orientation") {
