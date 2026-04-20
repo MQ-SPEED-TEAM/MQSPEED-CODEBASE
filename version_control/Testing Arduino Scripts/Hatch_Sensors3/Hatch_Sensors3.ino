@@ -285,13 +285,16 @@ void loop() {
         Serial.flush();
         }
       }
-   if(Serial.available()>0 && !Serial2.available()>0){
-      pi_data = Serial.readStringUntil('\n');
-      pi_data.trim();
-      Serial2.println(pi_data);
-      //Serial2.print("hello aaron");
-      Serial2.println();
-      Serial2.flush();
+
+    if (Serial.available()>0 && !Serial2.available()>0) {
+    pi_data = Serial.readStringUntil('\n');
+    pi_data.trim();
+
+    Serial2.write(0x02);          // STX
+    Serial2.print(pi_data);       // Payload
+    Serial2.write(0x03);          // ETX
+    Serial2.flush();
     }
+     
   }
 }
