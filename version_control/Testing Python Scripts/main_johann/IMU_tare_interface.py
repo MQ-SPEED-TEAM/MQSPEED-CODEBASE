@@ -6,8 +6,14 @@ BAUD = 115200
 
 def main():
     print("Connecting to ESP32...")
-    ser = serial.Serial(PORT, BAUD, timeout=1)
-    time.sleep(2)  # allow ESP32 to reset
+    try:
+        ser = serial.Serial('/dev/ttyUSB0', 115200, timeout=1, xonxoff=False, rtscts=True, dsrdtr=True)
+        ser.reset_input_buffer()
+        time.sleep(2)  # allow ESP32 to reset
+    except:
+        ser = None
+        print("ESP NOT FOUND, DOUBLE CHECK PORT ASSIGNMENT")
+        
 
     print("Connected. Type commands:")
     print("  tare     → apply imu.tareNow()")
@@ -27,7 +33,7 @@ def main():
             ser.flush()
 
             # read response
-            time.sleep(0.1)
+            time.sleep(0.3)
             while ser.in_waiting:
                 print("ESP32:", ser.readline().decode().strip())
 
