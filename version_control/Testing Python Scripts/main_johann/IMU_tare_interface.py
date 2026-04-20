@@ -19,6 +19,7 @@ def main():
     print("  tare     → apply imu.tareNow()")
     print("  persist  → apply imu.saveTare()")
     print("  clear    → apply imu.clearTare()")
+    print("  orientation    → read current roll, pitch, and yaw")
     print("  quit     → exit program")
 
     while True:
