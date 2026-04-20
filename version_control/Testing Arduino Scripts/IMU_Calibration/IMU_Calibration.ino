@@ -1,18 +1,19 @@
 #include <Wire.h>
-#include <SparkFun_BNO080_Arduino_Library.h>
+#include "SparkFun_BNO08x_Arduino_Library.h"
 
 #define SDA_PIN 21
 #define SCL_PIN 22
 
-BNO080 imu;
+BNO08x imu;
 
-// Quaternion + orientation variables
+// Orientation variables
 float qw, qx, qy, qz;
 float instant_roll, instant_pitch, instant_yaw;
 
 void computeOrientation() {
   if (!imu.dataAvailable()) return;
 
+  // Raw quaternion from SparkFun SH-2 driver
   qw = imu.getQuatReal();
   qx = imu.getQuatI();
   qy = imu.getQuatJ();
@@ -57,7 +58,7 @@ void setup() {
   delay(300);
 
   Wire.begin(SDA_PIN, SCL_PIN);
-  Wire.setClock(400000);   // REQUIRED for SparkFun SH-2
+  Wire.setClock(400000);   // REQUIRED for SparkFun SH-2 library
 
   delay(300); // FSM300 boot time
 
@@ -66,7 +67,8 @@ void setup() {
     while (1) delay(10);
   }
 
-  imu.enableRotationVector(10); // 10ms = 100Hz
+  // Enable rotation vector at 100 Hz (10 ms)
+  imu.enableRotationVector(10);
 
   Serial.println("FSM300 SparkFun Calibration Interface Ready");
   Serial.println("Commands: tare | persist | clear | orientation");
