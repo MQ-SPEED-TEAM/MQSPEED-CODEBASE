@@ -156,6 +156,31 @@ def system():
 
 
         cached_lines = overlay_dict.get(overlay_mode, ["Invalid overlay mode"])
+        
+        
+    #/////////////// Colour Gradient Function ////////////////    
+    def get_gradient_colour(actual_power, target_power):
+        ratio = actual_power / target_power
+        
+        #clamp ratio into 0 to 1.2
+        ratio = max(0.0, min(ratio, 1.2))
+        
+        #BGR colours
+        low = np.array([255,0,0])		# blue
+        mid = np.array([0,255,0])		# purple
+        high = np.array([0,0,255])		# red
+        
+        if ratio < 0.9:
+            t = ratio / 0.7
+            colour = (1-t) * low + t * mid
+            
+        elif ratio > 1.1:
+            t = (ratio - 0.7) / 0.7
+            colour = (1 - t) * mid + t * high
+            
+        else:
+            colour = mid 
+        return tuple(int(c) for c in colour)
 
 
 
@@ -211,17 +236,19 @@ def system():
             )
 
 
-            #//////////// Power bar graphic ////////////
+            #//////////// Power Bar Graphic ////////////
 
             #Bar size and position
             bar_height = 200 
             bar_width = 50
+            
 
             bar_max_power = 1000
             actual_power = max(0, sensor_data_processor.rl)
             target_power = max(1, get_power_target(sensor_data_processor.dt))
-            fill_ratio = min(actual_power / target_power, 1.0)
+            fill_ratio = min(actual_power / target_power, 1.2)
             fill_height = int(fill_ratio * bar_height)
+            bar_colour = get_gradient_colour(actual_power, target_power)
 
            
 
@@ -230,25 +257,16 @@ def system():
 
 
             bar_x = frame_w // 2 - bar_width // 2
-            bar_y = frame_h // 2 + 250 
+            bar_y = frame_h // 2 + 300 
 
             
             
-            #Colour changes
-            if actual_power  < target_power -10:
-                bar_colour = (0,0,255)
-
-            elif actual_power  > target_power + 5:
-                bar_colour = (255,0,0)
-
-            else:
-                bar_colour = (0,255,0)
 
 
             cv2.rectangle(
                 frame,
-                (bar_x, bar_y),
-                (bar_x + bar_width, bar_y + bar_height),
+                (bar_x, bar_y - 30),
+                (bar_x + bar_width, bar_y + bar_height   ),
                 (255, 255, 255),
                 2
             )
@@ -260,16 +278,31 @@ def system():
                 bar_colour,
                 cv2.FILLED
             )
+            
+            cv2.line(
+                frame,
+                (bar_x, bar_y - 15),
+                (bar_x + bar_width, bar_y - 15),
+                (255,255,255),
+                2
+            )
+            cv2.line(
+                frame,
+                (bar_x, bar_y + 15 ),
+                (bar_x + bar_width, bar_y + 15 ),
+                (255,255,255),
+                2
+            )
 
 
             # triangle at top of bar
             triangle_height = 52
-            triangle_half_width = 40
+            triangle_half_width = 60
 
             triangle_points = np.array([
-                [bar_x + bar_width // 2, bar_y - triangle_height],
-                [bar_x + bar_width // 2 - triangle_half_width, bar_y],
-                [bar_x + bar_width // 2 + triangle_half_width, bar_y],
+                [bar_x + bar_width // 2, bar_y - 30 - triangle_height],
+                [bar_x + bar_width // 2 - triangle_half_width, bar_y - 30],
+                [bar_x + bar_width // 2 + triangle_half_width, bar_y - 30],
             ], dtype=np.int32)
 
             cv2.fillPoly(frame, [triangle_points], bar_colour)
