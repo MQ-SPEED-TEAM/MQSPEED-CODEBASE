@@ -171,7 +171,7 @@ def system():
         high = np.array([0,0,255])		# red
         
         if ratio < 0.9:
-            t = ratio / 0.7
+            t = (ratio - 0.7) / 0.7
             colour = (1-t) * low + t * mid
             
         elif ratio > 1.1:
