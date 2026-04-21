@@ -53,7 +53,7 @@ class SensorDataProcessor:
         self.espbike = 0
         self.espgear = 0
         self.defects = 0 # Variable for testing serial reading consistency when debugging
-        self.expected_ports = 3 # Sets the number of ports (1,2,3,4) needed to be detected before check_port_complete function returns True
+        self.expected_ports = 1 # Sets the number of ports (1,2,3,4) needed to be detected before check_port_complete function returns True
         
         # legend in order : central wheel=c, left wheel=l, right wheel=r, crank=cr, shaft=s, total speed=ts, gear set=g,
         # steering angle=sa, acceleration x=ax, acceleration y=ay, acceleration z=az, angular velocity x=vx, angular velocity y=vy
