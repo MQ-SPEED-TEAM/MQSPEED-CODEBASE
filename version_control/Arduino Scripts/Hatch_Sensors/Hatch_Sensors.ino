@@ -1,42 +1,44 @@
-
+// ESP32 firmware (C++) — reads all the sensors and sends data to the Pi via USB serial, also receives commands from the Pi and sends them to the transceiver via UART serial. The ESP32 is also responsible for blinking an LED when the Pi battery is low, and reading the backup screen battery voltage.
 //////////////////////////////////////////LIBRARIES/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include <Adafruit_GPS.h>
-#include <RunningAverage.h>
-#include <DFRobot_BME680_I2C.h>
-#include <Wire.h>
-#include <esp_attr.h>
-#include <Adafruit_Sensor.h>
-#include <Adafruit_BNO08x.h> // Library name is BNO08x but actual sensor is FSM30x
+// 3 sensors: GPS, BME680(environment), FSM30x(IMU)
+#include <Adafruit_GPS.h> // S1: GPS library, actual gps is based on a mtk8889 chipset, designed on adafruit ultimate gps breakout board. Serial communication.
+#include <RunningAverage.h> // Rolling average calculations
+#include <DFRobot_BME680_I2C.h> // S2: An enviromental sensor that reads temperature, humidity and pressure. I2C
+#include <Wire.h> // I2C communication library
+#include <esp_attr.h> // ESP32 memory attributes
+#include <Adafruit_Sensor.h> // Base sensor library
+#include <Adafruit_BNO08x.h> // S3: IMU library name is BNO08x but actual sensor is FSM30x
 
 
-#define SERIAL_BUFFER_SIZE  2048
+#define SERIAL_BUFFER_SIZE  2048 // Size of serial read/write buffers
 
 // ===== I2C PINS =====
-#define SDA_PIN 21
-#define SCL_PIN 22
+#define SDA_PIN 21 // I2C data pin (serial bidirectional data line)
+#define SCL_PIN 22 // I2C clock pin
 
 // Optional pins (can be -1 if unused)
-#define BNO08X_INT -1
-#define BNO08X_RST -1
+#define BNO08X_INT -1 // Interrupt pin for BNO08X (not used in this code, set to -1)
+#define BNO08X_RST -1 // Reset pin for BNO08X (not used in this code, set to -1)
 
 
-String pi_data;
-String command;
-#define GPSECHO true
+String pi_data; // Stores data received from Pi {white because declared but never used}
+String command; // Stores commands received from transceiver
+#define GPSECHO true // overidden below?
 
-////libraries stuff
+////libraries stuff // Create IMU object with reset pin
 Adafruit_BNO08x bno08x(BNO08X_RST);
-sh2_SensorValue_t sensorValue;
+sh2_SensorValue_t sensorValue; // Stores latest IMU sensor reading
 
-Adafruit_GPS GPS(&Serial1);
-#define GPSECHO false
+Adafruit_GPS GPS(&Serial1); // Create GPS object on Serial1 port
+#define GPSECHO false // Disable echoing raw GPS data to serial
+
 
 ////////////////////////////////////////Libraries initialization////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-RunningAverage battery_pi_read(1000);
-RunningAverage battery_analog_read(1000);
+RunningAverage battery_pi_read(1000); // 1000 sample average of battery voltage readings, last 10 seconds (1000 readings at 10ms intervals)
+RunningAverage battery_analog_read(1000); // backup screen battery voltage
 RunningAverage averaged_roll_read(100);
 RunningAverage averaged_pitch_read(100);
 RunningAverage averaged_yaw_read(100);
@@ -63,18 +65,19 @@ float instant_yaw;
 float average_roll = 0;
 float average_pitch = 0;
 float average_yaw = 0;
-float qw;
-float qx;
-float qy;
-float qz;
+float qw, qx, qy, qz; // IMU quaternion variables
+float ax, ay, az; // IMU accelerometer variables (m/s²)
+float mx, my, mz; // IMU magnetometer variables (uTesla)
+float gx, gy, gz; // IMU gyroscope/angular velocity variables (rad/s)
 
 ///////////////////////////////////////////////////AIR QUALITY//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// BME680 environmental variables
 float Temperature;          // Temperature value 
 float Humidity;            // Humidity value 
 float Pressure;           // Pressure value
-unsigned long lastRead=0;
+unsigned long lastRead=0; // Timestamp of last BME680 reading
 
 ////////////////////////////////////////////////////////PINS///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -83,8 +86,8 @@ const int set_A = 33;           //transciever m1
 const int set_B = 32;           //transciever m0
 // const int aux = 33;             //transciever aux
 #define LED 2                   //ESP led pin
-#define pi_bat 27                  //Pi battery
-#define backup_bat 26                  //Backup screen battery
+#define pi_bat 27               // Analog pin monitors Pi battery 
+#define backup_bat 26           // Analog pin monitors backup screen battery
 
 //////////////////////////////////////////////////// TWEAK variables///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -97,29 +100,29 @@ const int print_frequency = 10; //milliseconds between Prints
 void setup() {
   Serial.begin(115200); //Setup USB communication port
   delay(700);
-  Serial.setTxBufferSize(SERIAL_BUFFER_SIZE);
+  Serial.setTxBufferSize(SERIAL_BUFFER_SIZE); 
   Serial.setRxBufferSize(SERIAL_BUFFER_SIZE);
   
-  Serial2.begin(115200, SERIAL_8N1, 17, 16);
+  Serial2.begin(115200, SERIAL_8N1, 17, 16); // Setup UART serial communication port for radio transceiver on pins 16 (RX) and 17 (TX)
   Serial2.setTxBufferSize(SERIAL_BUFFER_SIZE);
   Serial2.setRxBufferSize(SERIAL_BUFFER_SIZE);
 
-  Serial1.begin(9600, SERIAL_8N1, 18, 19); //Setup GPS communication port
+  Serial1.begin(9600, SERIAL_8N1, 18, 19); //Setup GPS serial communication port on pins 18, 19
 
-  GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
-  GPS.sendCommand(PMTK_SET_NMEA_UPDATE_10HZ);
+  GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA); // Request RMC+GGA sentences from GPS
+  GPS.sendCommand(PMTK_SET_NMEA_UPDATE_10HZ); // Set GPS update rate to 10Hz
   
-  pinMode(set_A, OUTPUT);
+  pinMode(set_A, OUTPUT); // Configure transceiver and sensor pins
   pinMode(set_B, OUTPUT);
   pinMode(LED,OUTPUT);
   // pinMode(aux, INPUT);
   pinMode(backup_bat, INPUT);
   pinMode(pi_bat, INPUT);
   
-  digitalWrite(set_A, LOW);
+  digitalWrite(set_A, LOW); // Set transceiver to default mode
   digitalWrite(set_B, LOW);
   
-  battery_pi_read.clear();
+  battery_pi_read.clear(); // Clear averaging buffers
   battery_analog_read.clear();
   averaged_roll_read.clear();
   averaged_pitch_read.clear();
@@ -131,39 +134,47 @@ void setup() {
 
 
    uint8_t rslt = 1;
-   while(!Serial);
+   while(!Serial); 
    delay(400);
-   rslt = bme.begin();
+   rslt = bme.begin(); // Initialize BME680 sensor
    //Serial.println("BME WORKING");
-   bme.startConvert();
+   bme.startConvert(); // Begin sensor conversion
    bme.update();
-
    delay(400);
+  
 //////////IMU SETUP////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  Wire.begin(SDA_PIN, SCL_PIN);
-  Wire.setClock(100000); // BNO08X supports 400kHz
+  Wire.begin(SDA_PIN, SCL_PIN); // Start I2C on specified SDA and SCL pins
+  Wire.setClock(100000); // Set I2C speed to 100kHz - BNO08X supports 400kHz
   delay(500);
 
-  if (!bno08x.begin_I2C()) {
+  if (!bno08x.begin_I2C()) { // Try connect to IMU
     Serial.println("❌ BNO08X not detected!");
-    while (1) delay(10);
+    while (1) delay(10); // 
   }
   delay(300);
   
-  // Enable rotation vector
- if (!bno08x.enableReport(SH2_ROTATION_VECTOR, 10000)) { // 10 ms
+  // BNO08X reports many types of sensor data (quaternions, Euler angles, accelerometer, gyroscope, magnetometer, etc.) this enables specific reports we want to receive from the IMU. Read in loop().
+ if (!bno08x.enableReport(SH2_ROTATION_VECTOR, 10000)) {
     Serial.println("Failed to enable rotation vector");
 }
+  // ADD THESE BELOW:
+  if (!bno08x.enableReport(SH2_ACCELEROMETER, 10000)) {
+    Serial.println("Failed to enable accelerometer");
+  }
+  if (!bno08x.enableReport(SH2_MAGNETIC_FIELD_CALIBRATED, 10000)) {
+    Serial.println("Failed to enable magnetometer");
+  }
+  if (!bno08x.enableReport(SH2_GYROSCOPE_CALIBRATED, 10000)) {
+    Serial.println("Failed to enable gyroscope");
+  }
 
 
 
 ///////////////////////////////////////////MAIN////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 }
-
-
 float map_f(float x, float in_min, float in_max, float out_min, float out_max) {/////////WTF is this?
-  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min; // A function to map a float from one range to another, similar to Arduino's built-in map() but for floats. Used for converting ADC readings to voltages.
 }
 
 
@@ -225,50 +236,63 @@ void loop() {
       average_yaw = averaged_yaw_read.getAverage();
 
       }
+      if (sensorValue.sensorId == SH2_ACCELEROMETER) { //*?
+        ax = sensorValue.un.accelerometer.x;
+        ay = sensorValue.un.accelerometer.y;
+        az = sensorValue.un.accelerometer.z;
+    }
+    if (sensorValue.sensorId == SH2_MAGNETIC_FIELD_CALIBRATED) {
+        mx = sensorValue.un.magneticField.x;
+        my = sensorValue.un.magneticField.y;
+        mz = sensorValue.un.magneticField.z;
+    }
+    if (sensorValue.sensorId == SH2_GYROSCOPE_CALIBRATED) {
+        gx = sensorValue.un.gyroscope.x;
+        gy = sensorValue.un.gyroscope.y;
+        gz = sensorValue.un.gyroscope.z;
+    }
     }
  
     // Calculate BME data
-     if(millis()-lastRead>1000){
+     if(millis()-lastRead>1000){ // Read BME680 data every 1 second/1000ms
        bme.startConvert();
        bme.update();
-       Temperature=bme.readTemperature() / 100, 2;
-       Humidity=bme.readHumidity() / 1000, 2;
-       Pressure=bme.readPressure();
-       lastRead=millis();
+       Temperature = bme.readTemperature() / 100, 2; // Degrees Celsius
+       Humidity = bme.readHumidity() / 1000, 2; // % Relative humidity
+       Pressure = bme.readPressure(); // Pressure Pa
+       lastRead = millis(); // Timestamp for last BME680 reading
      }
 
     
-    /// CALCULATE VOLTAGES ///
-    voltage_pi  = battery_pi_read.getAverage();
-    voltage_pi = map_f(voltage_pi, 0.0, 4095.0, 0.0, 3.3);
-    voltage_pi = (voltage_pi*(12.2/2.2)) + 0.535;
+   /// CALCULATE BATTERY VOLTAGES ///
+    voltage_pi  = battery_pi_read.getAverage(); // Get average Pi battery reading from rolling average buffer
+    voltage_pi = map_f(voltage_pi, 0.0, 4095.0, 0.0, 3.3); // Convert ADC reading (0-4095) to voltage (0-3.3V) based on ESP32 ADC characteristics
+    voltage_pi = (voltage_pi*(12.2/2.2)) + 0.535; // Scale voltage reading based on voltage divider resistors (12.2k and 2.2k resistors) and add offset estimate for the PI battery voltage. 
 
     voltage_analog  = battery_analog_read.getAverage();
-    voltage_analog = map_f(voltage_analog, 0.0, 4095.0, 0.0, 3.3);
-    voltage_analog = (voltage_analog*(12.2/2.2)) + 0.535;
+    voltage_analog = map_f(voltage_analog, 0.0, 4095.0, 0.0, 3.3); // Convert ADC reading to voltage for backup battery
+    voltage_analog = (voltage_analog*(12.2/2.2)) + 0.535; 
 
-  if(voltage_pi <= 14.1){
+  if(voltage_pi <= 14.1){ // If Pi battery voltage is below 14.1V, blink LED to indicate low battery
     led_time = millis();
-    if (led_time - led_prev_time >= 1000) {
+    if (led_time - led_prev_time >= 1000) { // Blink LED every 1 second (1000ms)
       // if the LED is off turn it on and vice-versa:
-      led_state = (led_state == LOW) ? HIGH : LOW;
+      led_state = (led_state == LOW) ? HIGH : LOW; // Toggle LED state?
+
+      digitalWrite(LED, led_state); // Update LED state to reflect low battery warning
   
-      // set the LED with the ledState of the variable:
-      digitalWrite(LED, led_state);
-  
-      // save the last time you blinked the LED
-      led_prev_time = led_time;
+      led_prev_time = led_time; // Update timestamp for last LED toggle
     }
   } 
   else {
-    digitalWrite(LED, LOW);
+    digitalWrite(LED, LOW); // If battery is not low, LED is off
   }
 
    // Parse GPS data
-  char c = GPS.read();
-  if (GPS.newNMEAreceived()) {
-    GPS.lastNMEA(); // this also sets the newNMEAreceived() flag to false
-    if (!GPS.parse(GPS.lastNMEA())) // this also sets the newNMEAreceived() flag to false
+  char c = GPS.read(); // Read a character from GPS
+  if (GPS.newNMEAreceived()) { // Check if a new NMEA sentence has been received from the GPS
+    GPS.lastNMEA(); // clears the newNMEAreceived() new sentence flag to false
+    if (!GPS.parse(GPS.lastNMEA())) // Try to parse the latest NMEA sentence, if parsing fails, skip to next loop iteration and wait for another sentence. This can happen if the GPS data is corrupted or incomplete.
       return; // we can fail to parse a sentence in which case we should just wait for another
   }
   //////////////////////////////////////////////Print to screen///////////////////////////////////////////////////////////////////////////
@@ -283,6 +307,24 @@ void loop() {
    Serial.print(",");
    Serial.print(average_yaw, 2); 
    Serial.print(",");
+   Serial.print(qw, 2);
+   Serial.print(",");
+   Serial.print(qx, 2);
+   Serial.print(",");
+   Serial.print(qy, 2);
+   Serial.print(",");
+   Serial.print(qz, 2);
+   Serial.print(",");
+
+   Serial.print(ax, 2); Serial.print(","); // print accelerometer, magnetometer, and gyroscope readings
+   Serial.print(ay, 2); Serial.print(",");
+   Serial.print(az, 2); Serial.print(",");
+   Serial.print(mx, 2); Serial.print(",");
+   Serial.print(my, 2); Serial.print(",");
+   Serial.print(mz, 2); Serial.print(",");
+   Serial.print(gx, 2); Serial.print(",");
+   Serial.print(gy, 2); Serial.print(",");
+   Serial.print(gz, 2); Serial.print(",");
    
    //print environment
    Serial.print(Temperature, 2);
