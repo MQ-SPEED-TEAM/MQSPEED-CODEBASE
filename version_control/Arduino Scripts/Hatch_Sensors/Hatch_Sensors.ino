@@ -3,27 +3,31 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #include <Adafruit_GPS.h>
 #include <RunningAverage.h>
-#include <DFRobot_BME680_I2C.h>/
+#include <DFRobot_BME680_I2C.h>
 #include <Wire.h>
 #include <esp_attr.h>
 #include <Adafruit_Sensor.h>
-#include <Adafruit_LSM303_Accel.h>
-#include <Adafruit_LIS2MDL.h>
+#include <Adafruit_BNO08x.h> // Library name is BNO08x but actual sensor is FSM30x
+
 
 #define SERIAL_BUFFER_SIZE  2048
+
+// ===== I2C PINS =====
+#define SDA_PIN 21
+#define SCL_PIN 22
+
+// Optional pins (can be -1 if unused)
+#define BNO08X_INT -1
+#define BNO08X_RST -1
+
 
 String pi_data;
 String command;
 #define GPSECHO true
 
 ////libraries stuff
-Adafruit_LIS2MDL lis2mdl = Adafruit_LIS2MDL(12345);
-#define LIS2MDL_CLK 13
-#define LIS2MDL_MISO 12
-#define LIS2MDL_MOSI 11
-#define LIS2MDL_CS 10
-
-Adafruit_LSM303_Accel_Unified accel = Adafruit_LSM303_Accel_Unified(54321);
+Adafruit_BNO08x bno08x(BNO08X_RST);
+sh2_SensorValue_t sensorValue;
 
 Adafruit_GPS GPS(&Serial1);
 #define GPSECHO false
@@ -33,6 +37,9 @@ Adafruit_GPS GPS(&Serial1);
 
 RunningAverage battery_pi_read(1000);
 RunningAverage battery_analog_read(1000);
+RunningAverage averaged_roll_read(100);
+RunningAverage averaged_pitch_read(100);
+RunningAverage averaged_yaw_read(100);
 
 //////////////////////////////////////////////I2C sensors///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -50,6 +57,16 @@ int x = 0;
 float heading = 0;
 float voltage_pi = 0;
 float voltage_analog = 0;
+float instant_roll;
+float instant_pitch;
+float instant_yaw;
+float average_roll = 0;
+float average_pitch = 0;
+float average_yaw = 0;
+float qw;
+float qx;
+float qy;
+float qz;
 
 ///////////////////////////////////////////////////AIR QUALITY//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -79,6 +96,7 @@ const int print_frequency = 10; //milliseconds between Prints
 
 void setup() {
   Serial.begin(115200); //Setup USB communication port
+  delay(700);
   Serial.setTxBufferSize(SERIAL_BUFFER_SIZE);
   Serial.setRxBufferSize(SERIAL_BUFFER_SIZE);
   
@@ -103,30 +121,41 @@ void setup() {
   
   battery_pi_read.clear();
   battery_analog_read.clear();
+  averaged_roll_read.clear();
+  averaged_pitch_read.clear();
+  averaged_yaw_read.clear();
 
+  
 ///////////////////////////////////////////TEMPERATURE SETUP/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 
+
+
    uint8_t rslt = 1;
    while(!Serial);
+   delay(400);
    rslt = bme.begin();
    //Serial.println("BME WORKING");
    bme.startConvert();
    bme.update();
 
-///////////////////////////////////////////magnetometer/////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/* Enable auto-gain */
-lis2mdl.enableAutoRange(true);
-lis2mdl.begin();
+   delay(400);
+//////////IMU SETUP////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  Wire.begin(SDA_PIN, SCL_PIN);
+  Wire.setClock(100000); // BNO08X supports 400kHz
+  delay(500);
 
-///////accelerometer setup//////
-accel.begin();
-accel.setRange(LSM303_RANGE_4G);
-  lsm303_accel_range_t new_range = accel.getRange();
+  if (!bno08x.begin_I2C()) {
+    Serial.println("❌ BNO08X not detected!");
+    while (1) delay(10);
+  }
+  delay(300);
+  
+  // Enable rotation vector
+ if (!bno08x.enableReport(SH2_ROTATION_VECTOR, 10000)) { // 10 ms
+    Serial.println("Failed to enable rotation vector");
+}
 
-  accel.setMode(LSM303_MODE_HIGH_RESOLUTION);
-  lsm303_accel_mode_t new_mode = accel.getMode();
+
 
 ///////////////////////////////////////////MAIN////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -142,11 +171,63 @@ void loop() {
    battery_pi_read.addValue(analogRead(pi_bat));
    battery_analog_read.addValue(analogRead(backup_bat));
 
-   sensors_event_t accel_event; //declare accel event
-   sensors_event_t mag_event; //decalre mag event
-   accel.getEvent(&accel_event); //capture accelerometer data
-   lis2mdl.getEvent(&mag_event);
+    // Calculate roll pitch yaw
+    
+    if (bno08x.getSensorEvent(&sensorValue)) {
+    if (sensorValue.sensorId == SH2_ROTATION_VECTOR) {
+      qw = sensorValue.un.rotationVector.real;
+      qx = sensorValue.un.rotationVector.i;
+      qy = sensorValue.un.rotationVector.j;
+      qz = sensorValue.un.rotationVector.k;
 
+      // Quaternion from IMU
+      float qw_i = qw;
+      float qx_i = qx;
+      float qy_i = qy;
+      float qz_i = qz;
+
+      // Rotation quaternion for mounting orientation
+      const float s = -0.70710678; // -sqrt(2)/2
+      float qw_r = 0.0f;
+      float qx_r = s;
+      float qy_r = s;
+      float qz_r = 0.0f;
+
+      // Apply mounting correction
+      float qw_m = qw_r*qw_i - qx_r*qx_i - qy_r*qy_i - qz_r*qz_i;
+      float qx_m = qw_r*qx_i + qx_r*qw_i + qy_r*qz_i - qz_r*qy_i;
+      float qy_m = qw_r*qy_i - qx_r*qz_i + qy_r*qw_i + qz_r*qx_i;
+      float qz_m = qw_r*qz_i + qx_r*qy_i - qy_r*qx_i + qz_r*qw_i;
+
+      // Replace IMU quaternion with corrected one
+      qw = qw_m;
+      qx = qx_m;
+      qy = qy_m;
+      qz = qz_m;
+
+      // Convert to Euler angles (degrees)
+      instant_roll  = atan2(2.0 * (qw * qx + qy * qz),
+                          1.0 - 2.0 * (qx * qx + qy * qy));
+      instant_pitch = asin(2.0 * (qw * qy - qz * qx));
+      instant_yaw   = atan2(2.0 * (qw * qz + qx * qy),
+                          1.0 - 2.0 * (qy * qy + qz * qz));
+      
+      instant_roll  *= 180.0 / PI; //Rotation about X (forward+ and backwards- axis)
+      instant_pitch *= 180.0 / PI; //Rotation about Y (left+ and right- axis)
+      instant_yaw   *= 180.0 / PI; //Rotation about Z (up+ and down- axis)
+
+      averaged_roll_read.addValue(instant_roll);
+      averaged_pitch_read.addValue(instant_pitch);
+      averaged_yaw_read.addValue(instant_yaw);
+
+      average_roll = averaged_roll_read.getAverage();
+      average_pitch = averaged_pitch_read.getAverage();
+      average_yaw = averaged_yaw_read.getAverage();
+
+      }
+    }
+ 
+    // Calculate BME data
      if(millis()-lastRead>1000){
        bme.startConvert();
        bme.update();
@@ -156,14 +237,7 @@ void loop() {
        lastRead=millis();
      }
 
-
-    //CALCULATE HEADING from magnetometer data
-     heading = (atan2(mag_event.magnetic.y,mag_event.magnetic.x) * 180) / 3.14159;
-      if (heading < 0)
-      {
-      heading = 360 + heading;
-    }
-
+    
     /// CALCULATE VOLTAGES ///
     voltage_pi  = battery_pi_read.getAverage();
     voltage_pi = map_f(voltage_pi, 0.0, 4095.0, 0.0, 3.3);
@@ -190,6 +264,7 @@ void loop() {
     digitalWrite(LED, LOW);
   }
 
+   // Parse GPS data
   char c = GPS.read();
   if (GPS.newNMEAreceived()) {
     GPS.lastNMEA(); // this also sets the newNMEAreceived() flag to false
@@ -202,19 +277,11 @@ void loop() {
    prev_output = millis();
    Serial.print("h");
    Serial.print(",");
-   Serial.print(accel_event.acceleration.x, 2); 
+   Serial.print(average_roll, 2); 
    Serial.print(",");
-   Serial.print(accel_event.acceleration.z, 2); 
+   Serial.print(average_pitch, 2); 
    Serial.print(",");
-   Serial.print(accel_event.acceleration.y, 2); 
-   Serial.print(",");
-   
-   //print magnetometer
-   Serial.print(mag_event.magnetic.x, 2);
-   Serial.print(","); 
-   Serial.print(mag_event.magnetic.y, 2); 
-   Serial.print(",");
-   Serial.print(mag_event.magnetic.z, 2);
+   Serial.print(average_yaw, 2); 
    Serial.print(",");
    
    //print environment
