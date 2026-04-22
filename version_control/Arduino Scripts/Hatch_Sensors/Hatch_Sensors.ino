@@ -100,7 +100,7 @@ void setup() {
   Serial.setTxBufferSize(SERIAL_BUFFER_SIZE);
   Serial.setRxBufferSize(SERIAL_BUFFER_SIZE);
   
-  Serial2.begin(115200, SERIAL_8N1, 16, 17);
+  Serial2.begin(115200, SERIAL_8N1, 17, 16);
   Serial2.setTxBufferSize(SERIAL_BUFFER_SIZE);
   Serial2.setRxBufferSize(SERIAL_BUFFER_SIZE);
 
