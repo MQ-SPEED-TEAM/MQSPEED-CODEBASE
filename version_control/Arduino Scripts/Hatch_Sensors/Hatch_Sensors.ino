@@ -79,9 +79,9 @@ unsigned long lastRead=0;
 ////////////////////////////////////////////////////////PINS///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-const int set_A = 25;           //transciever aux
-const int set_B = 32;           //transciever aux
-const int aux = 33;             //transciever aux
+const int set_A = 33;           //transciever m1
+const int set_B = 32;           //transciever m0
+// const int aux = 33;             //transciever aux
 #define LED 2                   //ESP led pin
 #define pi_bat 27                  //Pi battery
 #define backup_bat 26                  //Backup screen battery
@@ -112,7 +112,7 @@ void setup() {
   pinMode(set_A, OUTPUT);
   pinMode(set_B, OUTPUT);
   pinMode(LED,OUTPUT);
-  pinMode(aux, INPUT);
+  // pinMode(aux, INPUT);
   pinMode(backup_bat, INPUT);
   pinMode(pi_bat, INPUT);
   
@@ -326,12 +326,14 @@ void loop() {
         Serial.flush();
         }
       }
-    if(Serial.available()>0 && !Serial2.available()>0){
-      pi_data = Serial.readStringUntil('\n');
-      pi_data.trim();
-      Serial2.print(pi_data);
-      Serial2.println();
-      Serial2.flush();
+    if (Serial.available()>0 && !Serial2.available()>0) {
+    pi_data = Serial.readStringUntil('\n');
+    pi_data.trim();
+
+    Serial2.write(0x02);          // STX
+    Serial2.print(pi_data);       // Payload
+    Serial2.write(0x03);          // ETX
+    Serial2.flush();
     }
   }
 }
