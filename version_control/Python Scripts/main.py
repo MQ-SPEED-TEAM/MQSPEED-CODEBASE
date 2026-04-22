@@ -9,10 +9,10 @@ import time
 from datetime import datetime
 import datetime as dt
 import csv
-from microcontroller_readings_3 import SensorDataProcessor
+from microcontroller_readings import SensorDataProcessor
 import os
 from multiprocessing import Process,Pipe,set_start_method
-import pedal_readings_orig as prd
+import pedal_readings as prd
 from picamera2.utils import Transform
 import cv2
 import numpy as np
@@ -143,14 +143,14 @@ def system():
                       f"gs: {sensor_data_processor.gs}  al: {sensor_data_processor.al}  sn: {sensor_data_processor.sn}"],
 
             "analysis": [f"c: {sensor_data_processor.c}  l: {sensor_data_processor.l}  r: {sensor_data_processor.r}  "
-                         f"cr: {sensor_data_processor.cr}  s: {sensor_data_processor.s}  ts: {sensor_data_processor.ts}  "
+                         f"cr: {sensor_data_processor.cr}  s: {sensor_data_processor.s}  ts: {sensor_data_processor.ts}  ",
                          f"sa: {sensor_data_processor.sa}  g: {sensor_data_processor.g}  bg: {sensor_data_processor.bg}",
                          f"rl: {sensor_data_processor.rl}  ph: {sensor_data_processor.ph}  yw: {sensor_data_processor.yw}",
                          f"t: {sensor_data_processor.t}  p: {sensor_data_processor.p}  h: {sensor_data_processor.h}",
                          f"bp: {sensor_data_processor.bp}  ba: {sensor_data_processor.ba}  dt: {sensor_data_processor.dt}",
-                         f"la: {sensor_data_processor.la}  lo: {sensor_data_processor.lo}  "
+                         f"la: {sensor_data_processor.la}  lo: {sensor_data_processor.lo}  ",
                          f"gs: {sensor_data_processor.gs}  al: {sensor_data_processor.al}  sn: {sensor_data_processor.sn}" ,
-                         f"tq: {sensor_data_processor.tq}  cd: {sensor_data_processor.cd}   pr: {sensor_data_processor.pr}"]   
+                         f"tq: {sensor_data_processor.tq}  cd: {sensor_data_processor.cd}   pr: {sensor_data_processor.pr}"],   
             
             "imu": [f"rl: {sensor_data_processor.rl}  ph: {sensor_data_processor.ph}  yw: {sensor_data_processor.yw}",
                         f"qw: {sensor_data_processor.qw}  qx: {sensor_data_processor.qx}  qy: {sensor_data_processor.qy}  qz: {sensor_data_processor.qz}",
@@ -176,11 +176,11 @@ def system():
         mid = np.array([0,255,0])		# purple
         high = np.array([0,0,255])		# red
         
-        if ratio < 0.9:
+        if ratio < 0.95:
             t = (ratio - 0.7) / 0.7
             colour = (1-t) * low + t * mid
             
-        elif ratio > 1.1:
+        elif ratio > 1.05:
             t = (ratio - 0.7) / 0.7
             colour = (1 - t) * mid + t * high
             
@@ -191,7 +191,7 @@ def system():
 
 
     power_profile = [
-        (500, 90),
+        (500, 100),
         (1000, 300),
         (1500, 400),
         (2000, 250),
@@ -230,7 +230,7 @@ def system():
             box_w = max_width + 80
             box_h = len(cached_lines) * line_height + 40
             box_x = max((frame_w - box_w) // 2, 0)
-            box_y = max(frame_h - box_h - padding, 0)
+            box_y = max(frame_h - box_h - padding, 0) + 20
 
             # solid black background
             cv2.rectangle(
@@ -250,7 +250,7 @@ def system():
             
 
             bar_max_power = 1000
-            actual_power = max(0, sensor_data_processor.rl)
+            actual_power = max(0, sensor_data_processor.pr)
             target_power = max(1, get_power_target(sensor_data_processor.dt))
             fill_ratio = min(actual_power / target_power, 1.2)
             fill_height = int(fill_ratio * bar_height)
@@ -262,8 +262,8 @@ def system():
            
 
 
-            bar_x = frame_w // 2 - bar_width // 2
-            bar_y = frame_h // 2 + 300 
+            bar_x = frame_w // 2 - 75
+            bar_y = frame_h // 2 + 330 
 
             
             
@@ -287,15 +287,15 @@ def system():
             
             cv2.line(
                 frame,
-                (bar_x, bar_y - 15),
-                (bar_x + bar_width, bar_y - 15),
+                (bar_x, bar_y - 10),
+                (bar_x + bar_width, bar_y - 10),
                 (255,255,255),
                 2
             )
             cv2.line(
                 frame,
-                (bar_x, bar_y + 15 ),
-                (bar_x + bar_width, bar_y + 15 ),
+                (bar_x, bar_y + 10 ),
+                (bar_x + bar_width, bar_y + 10 ),
                 (255,255,255),
                 2
             )
@@ -312,6 +312,21 @@ def system():
             ], dtype=np.int32)
 
             cv2.fillPoly(frame, [triangle_points], bar_colour)
+            
+            cv2.putText(
+                frame,
+                f"{target_power}w",
+                (bar_x , bar_y - 35),
+                font,
+                0.8,
+                (255, 255, 255),
+                2
+            )
+            
+            
+                
+            
+    
 
   
             # text
