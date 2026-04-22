@@ -113,7 +113,7 @@ def system():
 
     # Define overlay function
     # Overlay mode selection
-    overlay_mode = "standard"
+    overlay_mode = "analysis"
     # Text overlay settings
     
     def update_overlay_lines():
@@ -316,7 +316,7 @@ def system():
             cv2.putText(
                 frame,
                 f"{target_power}w",
-                (bar_x , bar_y - 35),
+                (bar_x - 10 , bar_y - 35),
                 font,
                 0.8,
                 (255, 255, 255),
