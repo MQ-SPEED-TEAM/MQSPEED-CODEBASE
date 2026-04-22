@@ -151,7 +151,13 @@ def system():
                          f"la: {sensor_data_processor.la}  lo: {sensor_data_processor.lo}  "
                          f"gs: {sensor_data_processor.gs}  al: {sensor_data_processor.al}  sn: {sensor_data_processor.sn}" ,
                          f"tq: {sensor_data_processor.tq}  cd: {sensor_data_processor.cd}   pr: {sensor_data_processor.pr}"]   
-             }
+            
+            "imu": [f"rl: {sensor_data_processor.rl}  ph: {sensor_data_processor.ph}  yw: {sensor_data_processor.yw}",
+                        f"qw: {sensor_data_processor.qw}  qx: {sensor_data_processor.qx}  qy: {sensor_data_processor.qy}  qz: {sensor_data_processor.qz}",
+                        f"ax: {sensor_data_processor.ax}  ay: {sensor_data_processor.ay}  az: {sensor_data_processor.az}",
+                        f"mx: {sensor_data_processor.mx}  my: {sensor_data_processor.my}  mz: {sensor_data_processor.mz}",
+                        f"gx: {sensor_data_processor.gx}  gy: {sensor_data_processor.gy}  gz: {sensor_data_processor.gz}"],     
+        }
 
 
 
