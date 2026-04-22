@@ -2,17 +2,29 @@
 #////////////////////////////////////////////////////////////////////
 
 import RPi.GPIO as GPIO
-from picamera2 import Picamera2, Preview
+from PyQt6.QtWidgets import QApplication
+from picamera2 import Picamera2, Preview, MappedArray
 from picamera2.encoders import H264Encoder
 import time  
 from datetime import datetime
 import datetime as dt
 import csv
-from microcontroller_readings import SensorDataProcessor
+from microcontroller_readings_3 import SensorDataProcessor
 import os
 from multiprocessing import Process,Pipe,set_start_method
-import pedal_readings as prd
+import pedal_readings_orig as prd
 from picamera2.utils import Transform
+import cv2
+import numpy as np
+from picamera2.outputs import FfmpegOutput
+import sys
+
+
+
+# Global overlay cache
+cached_lines = []
+frame_counter = 0
+overlay_update_interval = 20  # Update overlay every 20 frames
 
 
 def system():
@@ -21,11 +33,12 @@ def system():
 
     GPIO.setmode(GPIO.BOARD) # Use physical pin numbering
     GPIO.setup(10, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Set pin 10 to be an input pin and set initial value to be pulled low (off)
+    GPIO.setup(12, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
     powerstate = False
     BASE_PATH = '/home/mqspeed/Desktop/'
-    f=open(BASE_PATH + 'Saves/Test_' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.csv', 'w')
-    writer = csv.writer(f)
+ 
+    run_once = True
     
     
     
@@ -36,6 +49,7 @@ def system():
     power_process = Process(target=prd.ant_main, args=(conn2,))
     power_process.start()
     
+    time.sleep(3)
     #////////////////////////////VARIABLES/////////////////////////////////////
     #//////////////////////////////////////////////////////////////////////////////
 
@@ -52,6 +66,7 @@ def system():
     time_start=0
     file_open = True
     debounce = True
+    debounce2 = True
     millis_start = 0
     ports_incomplete = True
     transmit_count = 0
@@ -67,20 +82,9 @@ def system():
     ts_list = []
     display_ts = 0
 
-
-
-    #///////////////////////CAMERA SETUP/////////////////////////////////
-    #///////////////////////////////////////////////////////////////////
-    encoder = H264Encoder()
-    picam2 = Picamera2()
-    video_config = picam2.create_video_configuration(transform=Transform(rotation=180))
-    picam2.configure(video_config)
-    picam2.start_preview(Preview.QTGL)
-    picam2.start()
-    picam2.set_controls({"Contrast": 0.75, "Saturation": 1.5})
-
-    # setup function
+     # setup function
     sensor_data_processor = SensorDataProcessor()
+    
 
     # Boot auto porting on startup
     if ports_incomplete:
@@ -93,6 +97,240 @@ def system():
 
     print("ports complete status:")
     print(not ports_incomplete)
+
+    #///////////////////////CAMERA SETUP/////////////////////////////////
+    #///////////////////////////////////////////////////////////////////
+    
+    
+    # Setup camera settings
+    encoder = H264Encoder()
+    picam2 = Picamera2()
+    video_config = picam2.create_video_configuration(main={"format": "XRGB8888", "size": (1640, 1232)},controls={"FrameRate": 30}, transform=Transform(rotation=0))
+    picam2.configure(video_config)
+    print("Starting camera preview")
+    
+    
+
+    # Define overlay function
+    # Overlay mode selection
+    overlay_mode = "standard"
+    # Text overlay settings
+    
+    def update_overlay_lines():
+        global cached_lines
+
+
+        overlay_dict = {
+            "standard": [f"Cadence: {round(sensor_data_processor.cr)}   "
+                         f"KPH: {round(sensor_data_processor.ts)}   "
+                         f"Gear: {round(sensor_data_processor.g)}   "
+                         f"Distance: {sensor_data_processor.dt}   "
+                         f"Power: {round(sensor_data_processor.pr)}"],
+            
+            "basic": [f"Cadence: {round(sensor_data_processor.cr)}   "
+                             f"KPH: {round(sensor_data_processor.ts)}   "
+                             f"Gear: {round(sensor_data_processor.g)}"],
+
+            "line1": [f"c: {sensor_data_processor.c}  l: {sensor_data_processor.l}  r: {sensor_data_processor.r}  "
+                      f"cr: {sensor_data_processor.cr}  s: {sensor_data_processor.s}  ts: {sensor_data_processor.ts}  "
+                      f"sa: {sensor_data_processor.sa}  g: {sensor_data_processor.g}  bg: {sensor_data_processor.bg}"],
+
+            "line2": [f"rl: {sensor_data_processor.rl}  ph: {sensor_data_processor.ph}  yw: {sensor_data_processor.yw}",
+                      f"t: {sensor_data_processor.t}  p: {sensor_data_processor.p}  h: {sensor_data_processor.h}",
+                      f"bp: {sensor_data_processor.bp}  ba: {sensor_data_processor.ba}  dt: {sensor_data_processor.dt}"],
+
+            "line3": [f"la: {sensor_data_processor.la}  lo: {sensor_data_processor.lo}  "
+                      f"gs: {sensor_data_processor.gs}  al: {sensor_data_processor.al}  sn: {sensor_data_processor.sn}"],
+
+            "analysis": [f"c: {sensor_data_processor.c}  l: {sensor_data_processor.l}  r: {sensor_data_processor.r}  "
+                         f"cr: {sensor_data_processor.cr}  s: {sensor_data_processor.s}  ts: {sensor_data_processor.ts}  "
+                         f"sa: {sensor_data_processor.sa}  g: {sensor_data_processor.g}  bg: {sensor_data_processor.bg}",
+                         f"rl: {sensor_data_processor.rl}  ph: {sensor_data_processor.ph}  yw: {sensor_data_processor.yw}",
+                         f"t: {sensor_data_processor.t}  p: {sensor_data_processor.p}  h: {sensor_data_processor.h}",
+                         f"bp: {sensor_data_processor.bp}  ba: {sensor_data_processor.ba}  dt: {sensor_data_processor.dt}",
+                         f"la: {sensor_data_processor.la}  lo: {sensor_data_processor.lo}  "
+                         f"gs: {sensor_data_processor.gs}  al: {sensor_data_processor.al}  sn: {sensor_data_processor.sn}" ,
+                         f"tq: {sensor_data_processor.tq}  cd: {sensor_data_processor.cd}   pr: {sensor_data_processor.pr}"]   
+             }
+
+
+
+        cached_lines = overlay_dict.get(overlay_mode, ["Invalid overlay mode"])
+        
+        
+    #/////////////// Colour Gradient Function ////////////////    
+    def get_gradient_colour(actual_power, target_power):
+        ratio = actual_power / target_power
+        
+        #clamp ratio into 0 to 1.2
+        ratio = max(0.0, min(ratio, 1.2))
+        
+        #BGR colours
+        low = np.array([255,0,0])		# blue
+        mid = np.array([0,255,0])		# purple
+        high = np.array([0,0,255])		# red
+        
+        if ratio < 0.9:
+            t = (ratio - 0.7) / 0.7
+            colour = (1-t) * low + t * mid
+            
+        elif ratio > 1.1:
+            t = (ratio - 0.7) / 0.7
+            colour = (1 - t) * mid + t * high
+            
+        else:
+            colour = mid 
+        return tuple(int(c) for c in colour)
+
+
+
+    power_profile = [
+        (500, 90),
+        (1000, 300),
+        (1500, 400),
+        (2000, 250),
+    ]
+
+    def get_power_target(distance):
+        for limit, power in power_profile:
+            if distance < limit:
+                return power
+        return power_profile[-1][1]
+
+        
+
+    
+    # Applying Overlay 
+    def apply_overlay(request):
+        global frame_counter, cached_lines
+
+        frame_counter += 1
+        if not cached_lines or frame_counter % overlay_update_interval == 0:
+            update_overlay_lines()
+       
+        with MappedArray(request, "main") as m:
+            frame = m.array
+            # Text settings
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            scale = 1.7
+            thickness = 3
+            line_height = 36
+            padding = 20
+
+            frame_h, frame_w = frame.shape[:2]
+
+            text_sizes = [cv2.getTextSize(line, font, scale, thickness)[0] for line in cached_lines]
+            max_width = max(w for w, h in text_sizes) if text_sizes else 0
+            box_w = max_width + 80
+            box_h = len(cached_lines) * line_height + 40
+            box_x = max((frame_w - box_w) // 2, 0)
+            box_y = max(frame_h - box_h - padding, 0)
+
+            # solid black background
+            cv2.rectangle(
+                frame,
+                (box_x, box_y),
+                (box_x + box_w, box_y + box_h),
+                (0, 0, 0),
+                cv2.FILLED
+            )
+
+
+            #//////////// Power Bar Graphic ////////////
+
+            #Bar size and position
+            bar_height = 200 
+            bar_width = 50
+            
+
+            bar_max_power = 1000
+            actual_power = max(0, sensor_data_processor.rl)
+            target_power = max(1, get_power_target(sensor_data_processor.dt))
+            fill_ratio = min(actual_power / target_power, 1.2)
+            fill_height = int(fill_ratio * bar_height)
+            bar_colour = get_gradient_colour(actual_power, target_power)
+
+           
+
+
+           
+
+
+            bar_x = frame_w // 2 - bar_width // 2
+            bar_y = frame_h // 2 + 300 
+
+            
+            
+
+
+            cv2.rectangle(
+                frame,
+                (bar_x, bar_y - 30),
+                (bar_x + bar_width, bar_y + bar_height   ),
+                (255, 255, 255),
+                2
+            )
+
+            cv2.rectangle(
+                frame,
+                (bar_x, bar_y + bar_height - fill_height),
+                (bar_x + bar_width, bar_y + bar_height),
+                bar_colour,
+                cv2.FILLED
+            )
+            
+            cv2.line(
+                frame,
+                (bar_x, bar_y - 15),
+                (bar_x + bar_width, bar_y - 15),
+                (255,255,255),
+                2
+            )
+            cv2.line(
+                frame,
+                (bar_x, bar_y + 15 ),
+                (bar_x + bar_width, bar_y + 15 ),
+                (255,255,255),
+                2
+            )
+
+
+            # triangle at top of bar
+            triangle_height = 52
+            triangle_half_width = 60
+
+            triangle_points = np.array([
+                [bar_x + bar_width // 2, bar_y - 30 - triangle_height],
+                [bar_x + bar_width // 2 - triangle_half_width, bar_y - 30],
+                [bar_x + bar_width // 2 + triangle_half_width, bar_y - 30],
+            ], dtype=np.int32)
+
+            cv2.fillPoly(frame, [triangle_points], bar_colour)
+
+  
+            # text
+            for i, line in enumerate(cached_lines):
+                text_width, _ = cv2.getTextSize(line, font, scale, thickness)[0]
+                text_x = max((frame_w - text_width) // 2, 0)
+                text_y = box_y + 50 + i * line_height
+                cv2.putText(frame, line, (text_x, text_y), font, scale, (255, 255, 255), thickness)
+                
+                
+
+
+      
+          
+
+  
+
+         
+    
+
+# saving overlay to recordings causes video lag over time
+    picam2.pre_callback = apply_overlay
+
+
+   
     #///////////////////////////////////MAIN////////////////////////////////////
     #///////////////////////////////////////////////////////////////////////////
 
@@ -100,9 +338,13 @@ def system():
     def moving_average(a, n):
         ret = sum(a)
         return ret/n
+    
+
         
 
     while True:
+        # limit while loop frequency with time.sleep()
+        time.sleep(0.001)
         millis = float(time.perf_counter())*1000
         
         #Other calculations
@@ -114,7 +356,7 @@ def system():
             pedals_data = conn1.recv()
             sensor_data_processor.pr = pedals_data[0]
             sensor_data_processor.cd = pedals_data[1]
-            
+            sensor_data_processor.tq = pedals_data[2]
 
         if (millis - time_last >=distance_calculation_interval): #Calculate distance in m from speed
             calculated_times += 1
@@ -128,12 +370,22 @@ def system():
                 file_open = True
             time.sleep(2)
             debounce = True
+            debounce2 = True
             #/////////////////////////////FILE SETUP/////////////////////////////////////////////
             #/////////////////////////////////////////////////////////////////////////////////
             f=open(BASE_PATH + 'Saves/Test_' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.csv', 'w')
             file_open = True
             video_filename = BASE_PATH + 'Camera Videos/Vid_ ' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.h264'
+            print("Starting Camera back up")
+            update_overlay_lines()
+            picam2.start_preview(Preview.QTGL, x=0, y=0, width = 1024, height = 600)
+            picam2.start()
+            # picam2.start_preview(Preview.QTGL, x=0, y=0, width = 1024, height = 600)
+            # wait to initialize camera
+            time.sleep(1)
+            # record camera
             picam2.start_recording(encoder, video_filename)
+            
             writer = csv.writer(f)
             #/////////////////////////Starting Camera and time/////////////////////////////// 
             #///////////////////////////////////////////////////////////////////////////////
@@ -144,20 +396,31 @@ def system():
             
         if GPIO.input(10) == GPIO.LOW:
             debounce = True
+            debounce2 = True
+
             
             if (millis >(20*printed_times+time_start)):
                 printed_times += 1
                 line_count += 1
                 auto_port_count += 1
                 transmit_count += 1
+
+                # Call to update overlay
+               
                 
                 # run any calculations before this function is called
+                if (run_once == True):
+                   data_stream = sensor_data_processor.expected_data
+                   data_stream.insert(0,  str("Time Stamp"))
+                   writer.writerow(data_stream)
+                   run_once = False
+                
                 data_stream = sensor_data_processor.process()
                 data_stream.insert(0, str(datetime.now().strftime('%H_%M_%S_%f'))[:-3])
                 
                 writer.writerow(data_stream)
                 
-                if transmit_count >= 20:
+                if transmit_count >= 40:
                     transmit_count = 0
                     sensor_data_processor.transmit()
                  
@@ -177,19 +440,6 @@ def system():
                         
                     sensor_data_processor.dt = distance_traveled
                     
-                    
-                #//////////////////////MODES FOR THE HUD//////////////////////////////////////////////////
-                #////////////////////////////////////////////////////////////////////////////////////////
-                #speed = round(float(sensor_data_processor.c)*0.000508,1)
-                standard_overlay = '                                                                                                                                         Cadance: ' +str(round(sensor_data_processor.cr)) +'   KPH: ' +str(round(sensor_data_processor.ts))+ '   Gear: '+ str(round(sensor_data_processor.g)) + '                            '+'   Distance: ' + str(sensor_data_processor.dt) +'   Power: ' + str(round(sensor_data_processor.pr))+'             '
-                analysis_overlay_line1 = 'c: ' +str(sensor_data_processor.c) + ' ' + ' l: ' + str(sensor_data_processor.l) +' '+ 'r: '+str(sensor_data_processor.r) +' '+ 'cr: '+str(sensor_data_processor.cr)  +' '+ 's: '+str(sensor_data_processor.s)+' '+ 'ts: '+str(sensor_data_processor.ts)+' '+ 'sa: '+str(sensor_data_processor.sa)+' '+ 'g: '+str(sensor_data_processor.g)+' '+ 'bg: '+str(sensor_data_processor.bg) 
-                analysis_overlay_line2 = 'ax: '+str(sensor_data_processor.ax)+' '+ 'ay: '+str(sensor_data_processor.ay)+' '+ 'az: '+str(sensor_data_processor.az)+' '+ 'vx: '+str(sensor_data_processor.vx)+' '+ 'vy: '+str(sensor_data_processor.vy)+' '+ 'vz: '+str(sensor_data_processor.vz)+'\n'+ 't: '+str(sensor_data_processor.t)+' '+ 'p: '+str(sensor_data_processor.p)+' '+ 'h: '+str(sensor_data_processor.h)+' '+ 'bp: '+str(sensor_data_processor.bp)+' '+ 'ba: '+str(sensor_data_processor.ba) + "dt: " + str(sensor_data_processor.dt)
-                analysis_overlay_line3 = 'la: '+str(sensor_data_processor.la)+' '+'lo: '+str(sensor_data_processor.lo)+' '+'gs: '+str(sensor_data_processor.gs)+' '+'al: '+str(sensor_data_processor.al)+' '+'sn: '+str(sensor_data_processor.sn)
-                analysis_overlay = analysis_overlay_line1 + '\n' + analysis_overlay_line2 + '\n' + analysis_overlay_line3         
-                #///////////////////////SETTING THE MODE FOR THE HUD///////////////////////////////////////
-                #/////////////////////////////////////////////////////////////////////////////////////////    
-#                 camera.annotate_text = analysis_overlay +'\n'+ port_status
-                # (No annotation support here)
             
         if GPIO.input(10) == GPIO.HIGH and powerstate == True and debounce == True:
             #/////DEBOUNCE IN CASE/////#
@@ -200,20 +450,42 @@ def system():
             #/////////////////////////////////////////////////////////////////////////////////
         if GPIO.input(10) == GPIO.HIGH and powerstate == True and debounce == False:
             time.sleep(1)
+            print("Stopping camera and data...")
             end_time = time.time()
             f.close()
             file_open = False
-            picam2.stop_recording(encoder, video_filename)
-            picam2.stop_preview()
-            power_process.join(1)
-            power_process.terminate()
+            try:
+                picam2.stop_preview()
+            except RuntimeError:
+                pass
+            picam2.stop_recording()
+            print("Stopped Camera...")
             powerstate = False
             ports_incomplete = True
             distance_traveled=0
+            sensor_data_processor.pr = 0
+            sensor_data_processor.cd = 0
+            sensor_data_processor.tq = 0
             
+            print("Stopped transmitting data...")
+            
+            
+        if GPIO.input(10) == GPIO.HIGH and powerstate == False and debounce == False:
+            debounce2 = True
+        
+        if GPIO.input(12) == GPIO.HIGH and GPIO.input(10) == GPIO.HIGH and powerstate == False and debounce2 == True:
+            #/////DEBOUNCE IN CASE/////#
+            time.sleep(2)
+            debounce2 = False
+            
+        if GPIO.input(12) == GPIO.HIGH and GPIO.input(10) == GPIO.HIGH and powerstate == False and debounce2 == False:
+            print("---------------------------------------------------------------------")
+            print("Starting system shutdown process...")
+            power_process.join(1)
+            power_process.terminate()
+            print("System shut down complete")
+            sys.exit()
             
 
 if __name__ == '__main__':
     system()
-
-
