@@ -22,7 +22,7 @@ def ant_main(connection = None):
         if isinstance(data, PowerData):
 #             print(f"PowerMeter {page_name} ({page}) update: {data}")
             try:
-                connection.send([data.instantaneous_power,data.cadence])
+                connection.send([data.instantaneous_power,data.cadence,data.torque])
             except:
                 pass
 
@@ -44,4 +44,3 @@ def ant_main(connection = None):
 
 if __name__ == "__main__":
     main()
-
