@@ -388,8 +388,8 @@ void loop()
 
   // digitalWrite(EN, LOW);
   // Serial.println(driver.SG_RESULT());
-  Serial.print(stall_on);
-  Serial.print(digitalRead(ENDSTOP));
+  //Serial.print(stall_on);
+  //Serial.print(digitalRead(ENDSTOP));
   // driver.VACTUAL(4476); // free running 4476 steps per rev
 
   if ((bt1_changed || bt2_changed) && time_running == false)
@@ -609,14 +609,13 @@ void loop()
 
     break;
   }
-  Serial.print("Current Gear: ");
+  Serial.print("g,");
   Serial.print(gear);
-  Serial.print(", State: ");
-  Serial.print(current_state);
-  Serial.print(", button 1 state: ");
-  Serial.print(bt1_pressed);
-  Serial.print(", button 2 state: ");
-  Serial.println(bt2_pressed);
+  Serial.print(",");
+  Serial.print(VOLTAGE_BATTERY);
+  Serial.print(",");
+  Serial.print("\n");
+  Serial.flush();
   last_bt1 = bt1_pressed;
   last_bt2 = bt2_pressed;
 }
