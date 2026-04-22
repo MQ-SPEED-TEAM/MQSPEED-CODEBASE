@@ -1,4 +1,3 @@
-
 //////////////////////////////////////////LIBRARIES/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -96,6 +95,8 @@ struct ints_struct{
 
 unsigned long print_time=0;
 
+int debug_counter = 1;
+
 ////////////////////////////////////////////ZERO VARIABLES//////////////////////////////////////////////////////////
 float old_value_shaft; 
 float old_value_l;
@@ -106,6 +107,8 @@ float old_value_crank;
 /////////////////////////////////////////////////STEERING ANGLE VARIABLES///////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+float time_last_steering = 0;
+float time_steering_frequency = 200; // milliseconds between every steering angle read
 float steering_angle;
 float steering_angle_max;
 float steering_angle_min;
@@ -231,8 +234,9 @@ void setup() {
 
 void loop() {
 
-if(run_sensor){
+if(run_sensor && millis() > time_last_steering + time_steering_frequency){
     steering_angle=as5600.rawAngle()/11.37777; //////conversion to degrees
+    time_last_steering = millis();
   }
  
    if(steering_angle>180){
@@ -400,7 +404,10 @@ int reading_crank=digitalRead(hall_pin5);
         old_value_crank = RPM_CRANK;
         time_last_crank=millis();
    }
-  
+
+  /// debug counter
+//  debug_counter++;
+//  if(debug_counter >10){ debug_counter=1;}
 
 
   //////////////////////////////////////////////Print to screen///////////////////////////////////////////////////////////////////////////
@@ -408,20 +415,21 @@ int reading_crank=digitalRead(hall_pin5);
 unsigned long print_now=millis();
 if(print_now-print_time>print_frequency){
 //Serial.println("b," + String(RPM_C,2) + "," + String(RPM_L,2) + "," + String(RPM_R,2) + "," + String(RPM_SHAFT,2) + "," + String(RPM_CRANK,2) + "," + String(0));
+//Serial.print(debug_counter);
 Serial.print("b,");
 Serial.print(RPM_C,2); 
 Serial.print(","); 
 Serial.print(RPM_L,2); 
 Serial.print(",");
-//Serial.flush();
+Serial.flush();
 Serial.print(RPM_R,2);  
 Serial.print(",");
 Serial.print(RPM_SHAFT,2);
 Serial.print(",");
 Serial.print(RPM_CRANK,2);
 Serial.print(",");
-Serial.println(steering_angle-142.4);
-//Serial.flush();
+Serial.println(steering_angle+138.6);
+Serial.flush();
 
 print_time=print_now;
   }
