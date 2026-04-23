@@ -113,7 +113,7 @@ def system():
 
     # Define overlay function
     # Overlay mode selection
-    overlay_mode = "analysis"
+    overlay_mode = "standard"
     # Text overlay settings
     
     def update_overlay_lines():
@@ -152,11 +152,11 @@ def system():
                          f"gs: {sensor_data_processor.gs}  al: {sensor_data_processor.al}  sn: {sensor_data_processor.sn}" ,
                          f"tq: {sensor_data_processor.tq}  cd: {sensor_data_processor.cd}   pr: {sensor_data_processor.pr}"],   
             
-            "imu": [f"rl: {sensor_data_processor.rl}  ph: {sensor_data_processor.ph}  yw: {sensor_data_processor.yw}",
-                        f"qw: {sensor_data_processor.qw}  qx: {sensor_data_processor.qx}  qy: {sensor_data_processor.qy}  qz: {sensor_data_processor.qz}",
-                        f"ax: {sensor_data_processor.ax}  ay: {sensor_data_processor.ay}  az: {sensor_data_processor.az}",
-                        f"mx: {sensor_data_processor.mx}  my: {sensor_data_processor.my}  mz: {sensor_data_processor.mz}",
-                        f"gx: {sensor_data_processor.gx}  gy: {sensor_data_processor.gy}  gz: {sensor_data_processor.gz}"],     
+#             "imu": [f"rl: {sensor_data_processor.rl}  ph: {sensor_data_processor.ph}  yw: {sensor_data_processor.yw}",
+#                         f"qw: {sensor_data_processor.qw}  qx: {sensor_data_processor.qx}  qy: {sensor_data_processor.qy}  qz: {sensor_data_processor.qz}",
+#                         f"ax: {sensor_data_processor.ax}  ay: {sensor_data_processor.ay}  az: {sensor_data_processor.az}",
+#                         f"mx: {sensor_data_processor.mx}  my: {sensor_data_processor.my}  mz: {sensor_data_processor.mz}",
+#                         f"gx: {sensor_data_processor.gx}  gy: {sensor_data_processor.gy}  gz: {sensor_data_processor.gz}"],     
         }
 
 
@@ -191,7 +191,7 @@ def system():
 
 
     power_profile = [
-        (500, 100),
+        (500, 150),
         (1000, 300),
         (1500, 400),
         (2000, 250),
@@ -250,7 +250,7 @@ def system():
             
 
             bar_max_power = 1000
-            actual_power = max(0, sensor_data_processor.pr)
+            actual_power = max(0, sensor_data_processor.yw)
             target_power = max(1, get_power_target(sensor_data_processor.dt))
             fill_ratio = min(actual_power / target_power, 1.2)
             fill_height = int(fill_ratio * bar_height)

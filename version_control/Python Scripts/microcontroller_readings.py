@@ -26,19 +26,19 @@ class SensorDataProcessor:
         self.rl = 0			#Roll
         self.ph = 0			#Pitch
         self.yw = 0			#Yaw
-        self.qw = 0    # Quaternion w (orientation)
-        self.qx = 0    # Quaternion x
-        self.qy = 0    # Quaternion y
-        self.qz = 0    # Quaternion z
-        self.ax = 0    # Acceleration X (m/s²)
-        self.ay = 0    # Acceleration Y (m/s²)
-        self.az = 0    # Acceleration Z (m/s²)
-        self.mx = 0    # Magnetometer X (uTesla)
-        self.my = 0    # Magnetometer Y (uTesla)
-        self.mz = 0    # Magnetometer Z (uTesla)
-        self.gx = 0    # Angular velocity X (rad/s)
-        self.gy = 0    # Angular velocity Y (rad/s)
-        self.gz = 0    # Angular velocity Z (rad/s)
+#         self.qw = 0    # Quaternion w (orientation)
+#         self.qx = 0    # Quaternion x
+#         self.qy = 0    # Quaternion y
+#         self.qz = 0    # Quaternion z
+#         self.ax = 0    # Acceleration X (m/s²)
+#         self.ay = 0    # Acceleration Y (m/s²)
+#         self.az = 0    # Acceleration Z (m/s²)
+#         self.mx = 0    # Magnetometer X (uTesla)
+#         self.my = 0    # Magnetometer Y (uTesla)
+#         self.mz = 0    # Magnetometer Z (uTesla)
+#         self.gx = 0    # Angular velocity X (rad/s)
+#         self.gy = 0    # Angular velocity Y (rad/s)
+#         self.gz = 0    # Angular velocity Z (rad/s)
         self.t = 0			#Temperature (C)
         self.p = 0			#Pressure (Pascals)
         self.h = 0			#Humidity (%)
@@ -61,17 +61,13 @@ class SensorDataProcessor:
         # Initialize expected data as a list for comparison in update_attributes function
         self.expected_data = ["c","l","r","cr","s","ts","sa","g","bg",
                             "rl","ph","yw",
-                            "qw","qx","qy","qz",
-                            "ax","ay","az",
-                            "mx","my","mz",
-                            "gx","gy","gz",
                             "t","h","p","bp","ba","la","lo","gs","al","sn",
                             "dt","pr","cd", "tq"]   
         self.esphatch = 0
         self.espbike = 0
         self.espgear = 0
         self.defects = 0 # Variable for testing serial reading consistency when debugging
-        self.expected_ports = 1 # Sets the number of ports (1,2,3,4) needed to be detected before check_port_complete function returns True
+        self.expected_ports = 2 # Sets the number of ports (1,2,3,4) needed to be detected before check_port_complete function returns True
         
         # legend in order : central wheel=c, left wheel=l, right wheel=r, crank=cr, shaft=s, total speed=ts, gear set=g,
         # steering angle=sa, acceleration x=ax, acceleration y=ay, acceleration z=az, angular velocity x=vx, angular velocity y=vy
@@ -394,7 +390,7 @@ class SensorDataProcessor:
         # Declare list of dict keys
         esp_bike_dictkeys = ["c","l","r","s","cr","sa"]
         esp_gear_dictkeys = ["g","bg"]
-        esp_hatch_dictkeys = ["rl","ph","yw","qw","qx","qy","qz","ax","ay","az","mx","my","mz","gx","gy","gz","t","h","p","bp","ba","la","lo","gs","al","sn"]
+        esp_hatch_dictkeys = ["rl","ph","yw","t","h","p","bp","ba","la","lo","gs","al","sn"]
         cal_data_dict = {"ts":self.ts, "dt":self.dt, "pr":self.pr, "cd":self.cd, "tq":self.tq}
         
         # Match list of dict keys to serial port list of data points

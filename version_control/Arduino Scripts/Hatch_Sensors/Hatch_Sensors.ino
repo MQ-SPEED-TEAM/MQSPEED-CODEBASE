@@ -157,16 +157,16 @@ void setup() {
  if (!bno08x.enableReport(SH2_ROTATION_VECTOR, 10000)) {
     Serial.println("Failed to enable rotation vector");
 }
-  // ADD THESE BELOW:
-  if (!bno08x.enableReport(SH2_ACCELEROMETER, 10000)) {
-    Serial.println("Failed to enable accelerometer");
-  }
-  if (!bno08x.enableReport(SH2_MAGNETIC_FIELD_CALIBRATED, 10000)) {
-    Serial.println("Failed to enable magnetometer");
-  }
-  if (!bno08x.enableReport(SH2_GYROSCOPE_CALIBRATED, 10000)) {
-    Serial.println("Failed to enable gyroscope");
-  }
+//  // ADD THESE BELOW:
+//  if (!bno08x.enableReport(SH2_ACCELEROMETER, 10000)) {
+//    Serial.println("Failed to enable accelerometer");
+//  }
+//  if (!bno08x.enableReport(SH2_MAGNETIC_FIELD_CALIBRATED, 10000)) {
+//    Serial.println("Failed to enable magnetometer");
+//  }
+//  if (!bno08x.enableReport(SH2_GYROSCOPE_CALIBRATED, 10000)) {
+//    Serial.println("Failed to enable gyroscope");
+//  }
 
 
 
@@ -236,21 +236,21 @@ void loop() {
       average_yaw = averaged_yaw_read.getAverage();
 
       }
-      if (sensorValue.sensorId == SH2_ACCELEROMETER) { //*?
-        ax = sensorValue.un.accelerometer.x;
-        ay = sensorValue.un.accelerometer.y;
-        az = sensorValue.un.accelerometer.z;
-    }
-    if (sensorValue.sensorId == SH2_MAGNETIC_FIELD_CALIBRATED) {
-        mx = sensorValue.un.magneticField.x;
-        my = sensorValue.un.magneticField.y;
-        mz = sensorValue.un.magneticField.z;
-    }
-    if (sensorValue.sensorId == SH2_GYROSCOPE_CALIBRATED) {
-        gx = sensorValue.un.gyroscope.x;
-        gy = sensorValue.un.gyroscope.y;
-        gz = sensorValue.un.gyroscope.z;
-    }
+//      if (sensorValue.sensorId == SH2_ACCELEROMETER) { //*?
+//        ax = sensorValue.un.accelerometer.x;
+//        ay = sensorValue.un.accelerometer.y;
+//        az = sensorValue.un.accelerometer.z;
+//    }
+//    if (sensorValue.sensorId == SH2_MAGNETIC_FIELD_CALIBRATED) {
+//        mx = sensorValue.un.magneticField.x;
+//        my = sensorValue.un.magneticField.y;
+//        mz = sensorValue.un.magneticField.z;
+//    }
+//    if (sensorValue.sensorId == SH2_GYROSCOPE_CALIBRATED) {
+//        gx = sensorValue.un.gyroscope.x;
+//        gy = sensorValue.un.gyroscope.y;
+//        gz = sensorValue.un.gyroscope.z;
+//    }
     }
  
     // Calculate BME data
@@ -301,30 +301,30 @@ void loop() {
    prev_output = millis();
    Serial.print("h");
    Serial.print(",");
-   Serial.print(average_roll, 2); 
+   Serial.print(average_pitch, 2); //(roll and pitch switched values)
    Serial.print(",");
-   Serial.print(average_pitch, 2); 
+   Serial.print(average_roll, 2); //investigae and switch back after
    Serial.print(",");
    Serial.print(average_yaw, 2); 
    Serial.print(",");
-   Serial.print(qw, 2);
-   Serial.print(",");
-   Serial.print(qx, 2);
-   Serial.print(",");
-   Serial.print(qy, 2);
-   Serial.print(",");
-   Serial.print(qz, 2);
-   Serial.print(",");
-
-   Serial.print(ax, 2); Serial.print(","); // print accelerometer, magnetometer, and gyroscope readings
-   Serial.print(ay, 2); Serial.print(",");
-   Serial.print(az, 2); Serial.print(",");
-   Serial.print(mx, 2); Serial.print(",");
-   Serial.print(my, 2); Serial.print(",");
-   Serial.print(mz, 2); Serial.print(",");
-   Serial.print(gx, 2); Serial.print(",");
-   Serial.print(gy, 2); Serial.print(",");
-   Serial.print(gz, 2); Serial.print(",");
+//   Serial.print(qw, 2);
+//   Serial.print(",");
+//   Serial.print(qx, 2);
+//   Serial.print(",");
+//   Serial.print(qy, 2);
+//   Serial.print(",");
+//   Serial.print(qz, 2);
+//   Serial.print(",");
+//
+//   Serial.print(ax, 2); Serial.print(","); // print accelerometer, magnetometer, and gyroscope readings
+//   Serial.print(ay, 2); Serial.print(",");
+//   Serial.print(az, 2); Serial.print(",");
+//   Serial.print(mx, 2); Serial.print(",");
+//   Serial.print(my, 2); Serial.print(",");
+//   Serial.print(mz, 2); Serial.print(",");
+//   Serial.print(gx, 2); Serial.print(",");
+//   Serial.print(gy, 2); Serial.print(",");
+//   Serial.print(gz, 2); Serial.print(",");
    
    //print environment
    Serial.print(Temperature, 2);
