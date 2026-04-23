@@ -113,7 +113,7 @@ def system():
 
     # Define overlay function
     # Overlay mode selection
-    overlay_mode = "standard"
+    overlay_mode = "analysis"
     # Text overlay settings
     
     def update_overlay_lines():
@@ -165,33 +165,32 @@ def system():
         
         
     #/////////////// Colour Gradient Function ////////////////    
-    def get_gradient_colour(actual_power, target_power):
-        ratio = actual_power / target_power
+    # ratio = actual_power / target_power
         
         #clamp ratio into 0 to 1.2
-        ratio = max(0.0, min(ratio, 1.2))
+       # ratio = max(0.0, min(ratio, 1.2))
         
         #BGR colours
-        low = np.array([255,0,0])		# blue
-        mid = np.array([0,255,0])		# purple
-        high = np.array([0,0,255])		# red
+        #low = np.array([255,0,0])		# blue
+        #mid = np.array([0,255,0])		# purple
+        #high = np.array([0,0,255])		# red
         
-        if ratio < 0.95:
-            t = (ratio - 0.7) / 0.7
-            colour = (1-t) * low + t * mid
+        #if ratio < 0.95:
+            #t = (ratio - 0.7) / 0.7
+            #colour = (1-t) * low + t * mid
             
-        elif ratio > 1.05:
-            t = (ratio - 0.7) / 0.7
-            colour = (1 - t) * mid + t * high
+        #elif ratio > 1.05:
+           # t = (ratio - 0.7) / 0.7
+           # colour = (1 - t) * mid + t * high
             
-        else:
-            colour = mid 
-        return tuple(int(c) for c in colour)
+        #else:
+           # colour = mid 
+        #return tuple(int(c) for c in colour)
 
 
 
     power_profile = [
-        (500, 150),
+        (500, 80),
         (1000, 300),
         (1500, 400),
         (2000, 250),
@@ -220,7 +219,7 @@ def system():
             font = cv2.FONT_HERSHEY_SIMPLEX
             scale = 1.7
             thickness = 3
-            line_height = 36
+            line_height = 50
             padding = 20
 
             frame_h, frame_w = frame.shape[:2]
@@ -245,16 +244,27 @@ def system():
             #//////////// Power Bar Graphic ////////////
 
             #Bar size and position
-            bar_height = 200 
+            bar_height = 250 
             bar_width = 50
             
 
             bar_max_power = 1000
-            actual_power = max(0, sensor_data_processor.yw)
+            actual_power = max(0, sensor_data_processor.ph)
             target_power = max(1, get_power_target(sensor_data_processor.dt))
-            fill_ratio = min(actual_power / target_power, 1.2)
+            bar_scale_max = target_power * 1.7
+            fill_ratio = min(actual_power / bar_scale_max, 1.0)
             fill_height = int(fill_ratio * bar_height)
-            bar_colour = get_gradient_colour(actual_power, target_power)
+            #bar_colour = get_gradient_colour(actual_power, target_power)
+            
+            #////////// Colour of Meter /////////
+            if target_power + 20 < actual_power:
+                bar_colour = (0,0,255)
+                
+            elif target_power - 20 > actual_power:
+                bar_colour = (255,0,0)
+                
+            else:
+                bar_colour = (0,255,0)
 
            
 
@@ -271,7 +281,7 @@ def system():
 
             cv2.rectangle(
                 frame,
-                (bar_x, bar_y - 30),
+                (bar_x, bar_y ),
                 (bar_x + bar_width, bar_y + bar_height   ),
                 (255, 255, 255),
                 2
@@ -279,7 +289,7 @@ def system():
 
             cv2.rectangle(
                 frame,
-                (bar_x, bar_y + bar_height - fill_height),
+                (bar_x, bar_y + bar_height - fill_height ),
                 (bar_x + bar_width, bar_y + bar_height),
                 bar_colour,
                 cv2.FILLED
@@ -287,17 +297,17 @@ def system():
             
             cv2.line(
                 frame,
-                (bar_x, bar_y - 10),
-                (bar_x + bar_width, bar_y - 10),
+                (bar_x, bar_y + 150),
+                (bar_x + bar_width, bar_y + 150 ),
                 (255,255,255),
-                2
+                4
             )
             cv2.line(
                 frame,
-                (bar_x, bar_y + 10 ),
-                (bar_x + bar_width, bar_y + 10 ),
+                (bar_x, bar_y + 70  ),
+                (bar_x + bar_width, bar_y + 70 ),
                 (255,255,255),
-                2
+                4
             )
 
 
@@ -306,9 +316,9 @@ def system():
             triangle_half_width = 60
 
             triangle_points = np.array([
-                [bar_x + bar_width // 2, bar_y - 30 - triangle_height],
-                [bar_x + bar_width // 2 - triangle_half_width, bar_y - 30],
-                [bar_x + bar_width // 2 + triangle_half_width, bar_y - 30],
+                [bar_x + bar_width // 2, bar_y - triangle_height],
+                [bar_x + bar_width // 2 - triangle_half_width, bar_y],
+                [bar_x + bar_width // 2 + triangle_half_width, bar_y],
             ], dtype=np.int32)
 
             cv2.fillPoly(frame, [triangle_points], bar_colour)
@@ -316,7 +326,7 @@ def system():
             cv2.putText(
                 frame,
                 f"{target_power}w",
-                (bar_x - 10 , bar_y - 35),
+                (bar_x - 10 , bar_y ),
                 font,
                 0.8,
                 (255, 255, 255),
@@ -347,7 +357,7 @@ def system():
          
     
 
-# saving overlay to recordings causes video lag over time
+
     picam2.pre_callback = apply_overlay
 
 
