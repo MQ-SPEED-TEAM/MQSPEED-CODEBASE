@@ -18,7 +18,7 @@ void setup() {
 
   delay(300);
 
-  if (!imu.begin(BNO08X_DEFAULT_ADDRESS, Wire, BNO08X_INT, BNO08X_RST)) {
+  if (!imu.begin(BNO08x_DEFAULT_ADDRESS, Wire, BNO08X_INT, BNO08X_RST)) {
     Serial.println("IMU not detected!");
     while (1) delay(10);
   }
