@@ -51,6 +51,7 @@ class SensorDataProcessor:
         self.al = 0			#Altitude (meters)
         self.sn = 0			#Satellite number
         self.pr = 0			#Power (Watts)
+        self.pr_avg = 0     #Average Power
         self.cd = 0			#Power pedals cadence (RPM)
         self.tq = 0         #Power pedals torque (Nm)
         
@@ -67,7 +68,7 @@ class SensorDataProcessor:
         self.espbike = 0
         self.espgear = 0
         self.defects = 0 # Variable for testing serial reading consistency when debugging
-        self.expected_ports = 2 # Sets the number of ports (1,2,3,4) needed to be detected before check_port_complete function returns True
+        self.expected_ports = 1 # Sets the number of ports (1,2,3,4) needed to be detected before check_port_complete function returns True
         
         # legend in order : central wheel=c, left wheel=l, right wheel=r, crank=cr, shaft=s, total speed=ts, gear set=g,
         # steering angle=sa, acceleration x=ax, acceleration y=ay, acceleration z=az, angular velocity x=vx, angular velocity y=vy
@@ -435,13 +436,13 @@ class SensorDataProcessor:
                     
                         #if esp_gear_dict["bg"] < 14.0:
                             #self.espgear = None
-                except IndexError: # Error likely due to battery analog reading flickering
-                    esp_gear_list.append('0')
+                    except IndexError: # Error likely due to battery analog reading flickering
+                        esp_gear_list.append('0')
                     
-                    esp_gear_dict = {esp_gear_dictkeys[i]: float(esp_gear_list[i]) for i in range(len(esp_gear_dictkeys))}
-                except ValueError: 
-                     esp_gear_dict = {"g":0,"bg":0}
-                     print("value error on gears")
+                        esp_gear_dict = {esp_gear_dictkeys[i]: float(esp_gear_list[i]) for i in range(len(esp_gear_dictkeys))}
+                    except ValueError: 
+                         esp_gear_dict = {"g":0,"bg":0}
+                         print("value error on gears")
             
             
             
@@ -518,6 +519,8 @@ class SensorDataProcessor:
         current_data.pop("df")
         current_data.pop("active_ports")
         current_data.pop("expected_ports")
+        current_data.pop("gear_home_complete")
+        current_data.pop("gear_home_message_time")
             
         return list(current_data.values())
     
@@ -548,6 +551,9 @@ class SensorDataProcessor:
         current_data.pop("df")
         current_data.pop("active_ports")
         current_data.pop("expected_ports")
+        current_data.pop("gear_home_complete")
+        current_data.pop("gear_home_message_time")
+
         
         # Format dictionary into byte stream
         current_data_line = str(list(current_data.values()))[1:-1]

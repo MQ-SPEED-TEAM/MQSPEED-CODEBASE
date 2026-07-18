@@ -89,7 +89,7 @@ def system():
     ts_list = []
     display_ts = 0
     power_history = deque()
-    sensor_data_processor.pr_avg = 0
+    
 
      # setup function
     sensor_data_processor = SensorDataProcessor()
@@ -361,7 +361,10 @@ def system():
                 
                 
                 
-            if sensor_data_processor.gear_home_message_time < 3:
+            if (
+                sensor_data_processor.gear_home_complete
+                and time.time() - sensor_data_processor.gear_home_message_time < 3
+                ):
                 
                 message = "GEAR HOMING COMPLETE"
                 
@@ -379,7 +382,7 @@ def system():
                 popup_padding_x = 40
                 popup_padding_y =30
                 
-                pop_x = (frame_w - text_width) // 2
+                popup_x = (frame_w - text_width) // 2
                 popup_y = frame_h //3
                 
                 
@@ -395,10 +398,10 @@ def system():
                     ),
                     (
                         popup_x + text_width +popup_padding_x,
-                        pop_y + popup_padding_y
+                        popup_y + popup_padding_y
                     ),
                     (0,0,0),
-                    cv2.filled
+                    cv2.FILLED
                 )
                 
                 #White border
@@ -429,7 +432,7 @@ def system():
                     popup_thickness
                 )
                 
-            else:
+            elif sensor_data_processor.gear_home_complete:
                 sensor_data_processor.gear_home_complete = False
                     
                 
@@ -482,7 +485,7 @@ def system():
             power_history.append((now, sensor_data_processor.pr))
             
             #Keep only last 3 seconds
-            while power_histor and power_history[0][0] < now -3:
+            while power_history and power_history[0][0] < now -3:
                 power_history.popleft()
                 
             # Rolling Average 3 Seconds
