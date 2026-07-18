@@ -18,6 +18,7 @@ import cv2
 import numpy as np
 from picamera2.outputs import FfmpegOutput
 import sys
+from collections import deque
 
 
 
@@ -26,6 +27,12 @@ cached_lines = []
 frame_counter = 0
 overlay_update_interval = 20  # Update overlay every 20 frames
 
+
+#Switch/Button GPIO Pins
+# (Pin IDs based on Pi5 GPIO PinOut)
+# Red = GPIO 1 (3V3 power)
+# Yellow = GPIO 15
+# Black = GPIO 18
 
 def system():
     #///////////////////////////////////SETUP////////////////////////////////////////////
@@ -81,6 +88,8 @@ def system():
     window_size = 10
     ts_list = []
     display_ts = 0
+    power_history = deque()
+    sensor_data_processor.pr_avg = 0
 
      # setup function
     sensor_data_processor = SensorDataProcessor()
@@ -102,7 +111,7 @@ def system():
     #///////////////////////////////////////////////////////////////////
     
     
-    # Setup camera settings
+     #Setup camera settings
     encoder = H264Encoder()
     picam2 = Picamera2()
     video_config = picam2.create_video_configuration(main={"format": "XRGB8888", "size": (1640, 1232)},controls={"FrameRate": 30}, transform=Transform(rotation=0))
@@ -113,7 +122,7 @@ def system():
 
     # Define overlay function
     # Overlay mode selection
-    overlay_mode = "analysis"
+    overlay_mode = "standard"
     # Text overlay settings
     
     def update_overlay_lines():
@@ -146,17 +155,19 @@ def system():
                          f"cr: {sensor_data_processor.cr}  s: {sensor_data_processor.s}  ts: {sensor_data_processor.ts}  ",
                          f"sa: {sensor_data_processor.sa}  g: {sensor_data_processor.g}  bg: {sensor_data_processor.bg}",
                          f"rl: {sensor_data_processor.rl}  ph: {sensor_data_processor.ph}  yw: {sensor_data_processor.yw}",
+                         f"ax: {sensor_data_processor.ax}  ay: {sensor_data_processor.ay}  az: {sensor_data_processor.az}",
+                         f"mx: {sensor_data_processor.mx}  my: {sensor_data_processor.my}  mz: {sensor_data_processor.mz}",
                          f"t: {sensor_data_processor.t}  p: {sensor_data_processor.p}  h: {sensor_data_processor.h}",
                          f"bp: {sensor_data_processor.bp}  ba: {sensor_data_processor.ba}  dt: {sensor_data_processor.dt}",
                          f"la: {sensor_data_processor.la}  lo: {sensor_data_processor.lo}  ",
                          f"gs: {sensor_data_processor.gs}  al: {sensor_data_processor.al}  sn: {sensor_data_processor.sn}" ,
                          f"tq: {sensor_data_processor.tq}  cd: {sensor_data_processor.cd}   pr: {sensor_data_processor.pr}"],   
             
-#             "imu": [f"rl: {sensor_data_processor.rl}  ph: {sensor_data_processor.ph}  yw: {sensor_data_processor.yw}",
-#                         f"qw: {sensor_data_processor.qw}  qx: {sensor_data_processor.qx}  qy: {sensor_data_processor.qy}  qz: {sensor_data_processor.qz}",
-#                         f"ax: {sensor_data_processor.ax}  ay: {sensor_data_processor.ay}  az: {sensor_data_processor.az}",
-#                         f"mx: {sensor_data_processor.mx}  my: {sensor_data_processor.my}  mz: {sensor_data_processor.mz}",
-#                         f"gx: {sensor_data_processor.gx}  gy: {sensor_data_processor.gy}  gz: {sensor_data_processor.gz}"],     
+             "imu": [f"rl: {sensor_data_processor.rl}  ph: {sensor_data_processor.ph}  yw: {sensor_data_processor.yw}",
+                         f"qw: {sensor_data_processor.qw}  qx: {sensor_data_processor.qx}  qy: {sensor_data_processor.qy}  qz: {sensor_data_processor.qz}",
+                         f"ax: {sensor_data_processor.ax}  ay: {sensor_data_processor.ay}  az: {sensor_data_processor.az}",
+                         f"mx: {sensor_data_processor.mx}  my: {sensor_data_processor.my}  mz: {sensor_data_processor.mz}",
+                         f"gx: {sensor_data_processor.gx}  gy: {sensor_data_processor.gy}  gz: {sensor_data_processor.gz}"],     
         }
 
 
@@ -174,23 +185,23 @@ def system():
         #low = np.array([255,0,0])		# blue
         #mid = np.array([0,255,0])		# purple
         #high = np.array([0,0,255])		# red
-        
-        #if ratio < 0.95:
-            #t = (ratio - 0.7) / 0.7
-            #colour = (1-t) * low + t * mid
-            
-        #elif ratio > 1.05:
-           # t = (ratio - 0.7) / 0.7
-           # colour = (1 - t) * mid + t * high
-            
-        #else:
-           # colour = mid 
-        #return tuple(int(c) for c in colour)
-
+#         
+#         if ratio < 0.95:
+#             t = (ratio - 0.7) / 0.7
+#             colour = (1-t) * low + t * mid
+#             
+#         elif ratio > 1.05:
+#             t = (ratio - 0.7) / 0.7
+#             colour = (1 - t) * mid + t * high
+#             
+#         else:
+#             colour = mid 
+#         return tuple(int(c) for c in colour)
+# 
 
 
     power_profile = [
-        (500, 80),
+        (500, 4),
         (1000, 300),
         (1500, 400),
         (2000, 250),
@@ -244,23 +255,23 @@ def system():
             #//////////// Power Bar Graphic ////////////
 
             #Bar size and position
-            bar_height = 250 
+            bar_height = 195 
             bar_width = 50
             
 
             bar_max_power = 1000
-            actual_power = max(0, sensor_data_processor.ph)
+            actual_power = max(0, sensor_data_processor.g)
             target_power = max(1, get_power_target(sensor_data_processor.dt))
-            bar_scale_max = target_power * 1.7
+            bar_scale_max = target_power * 2.2
             fill_ratio = min(actual_power / bar_scale_max, 1.0)
             fill_height = int(fill_ratio * bar_height)
             #bar_colour = get_gradient_colour(actual_power, target_power)
             
             #////////// Colour of Meter /////////
-            if target_power + 20 < actual_power:
+            if target_power + 1 < actual_power:
                 bar_colour = (0,0,255)
                 
-            elif target_power - 20 > actual_power:
+            elif target_power - 1 > actual_power:
                 bar_colour = (255,0,0)
                 
             else:
@@ -325,8 +336,8 @@ def system():
             
             cv2.putText(
                 frame,
-                f"{target_power}w",
-                (bar_x - 10 , bar_y ),
+                f"{target_power}",
+                (bar_x  , bar_y ),
                 font,
                 0.8,
                 (255, 255, 255),
@@ -345,6 +356,82 @@ def system():
                 text_x = max((frame_w - text_width) // 2, 0)
                 text_y = box_y + 50 + i * line_height
                 cv2.putText(frame, line, (text_x, text_y), font, scale, (255, 255, 255), thickness)
+                
+                
+                
+                
+                
+            if sensor_data_processor.gear_home_message_time < 3:
+                
+                message = "GEAR HOMING COMPLETE"
+                
+                popup_scale= 1.5
+                popup_thickness = 4
+                
+                
+                text_width, text_height = cv2.getTextSize(
+                    message,
+                    font,
+                    popup_scale,
+                    popup_thickness
+                    )[0]
+                
+                popup_padding_x = 40
+                popup_padding_y =30
+                
+                pop_x = (frame_w - text_width) // 2
+                popup_y = frame_h //3
+                
+                
+                
+                # Black popup background
+                
+                
+                cv2.rectangle(
+                    frame,
+                    (
+                        popup_x - popup_padding_x,
+                        popup_y - text_height - popup_padding_y,
+                    ),
+                    (
+                        popup_x + text_width +popup_padding_x,
+                        pop_y + popup_padding_y
+                    ),
+                    (0,0,0),
+                    cv2.filled
+                )
+                
+                #White border
+                cv2.rectangle(
+                    frame,
+                    (
+                        popup_x - popup_padding_x,
+                        popup_y - text_height - popup_padding_y
+                    ),
+                    (
+                        popup_x + text_width + popup_padding_x,
+                        popup_y + popup_padding_y
+                        
+                    ),
+                    (255, 255, 255),
+                    4
+                )
+                
+                
+                #Popup text
+                cv2.putText(
+                    frame,
+                    message,
+                    (popup_x, popup_y),
+                    font,
+                    popup_scale,
+                    (255, 255, 255),
+                    popup_thickness
+                )
+                
+            else:
+                sensor_data_processor.gear_home_complete = False
+                    
                 
                 
 
@@ -388,6 +475,20 @@ def system():
             sensor_data_processor.pr = pedals_data[0]
             sensor_data_processor.cd = pedals_data[1]
             sensor_data_processor.tq = pedals_data[2]
+            
+            now = time.time()
+            
+            #Store the (timestamp, power)
+            power_history.append((now, sensor_data_processor.pr))
+            
+            #Keep only last 3 seconds
+            while power_histor and power_history[0][0] < now -3:
+                power_history.popleft()
+                
+            # Rolling Average 3 Seconds
+            sensor_data_processor.pr_avg = (
+                sum(p for _, p in power_history) / len(power_history)
+            )
 
         if (millis - time_last >=distance_calculation_interval): #Calculate distance in m from speed
             calculated_times += 1
@@ -404,9 +505,9 @@ def system():
             debounce2 = True
             #/////////////////////////////FILE SETUP/////////////////////////////////////////////
             #/////////////////////////////////////////////////////////////////////////////////
-            f=open(BASE_PATH + 'Saves/Test_' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.csv', 'w')
+            f=open(BASE_PATH + 'CSV/Test_' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.csv', 'w')
             file_open = True
-            video_filename = BASE_PATH + 'Camera Videos/Vid_ ' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.h264'
+            video_filename = BASE_PATH + 'VIDEO/Vid_ ' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.h264'
             print("Starting Camera back up")
             update_overlay_lines()
             picam2.start_preview(Preview.QTGL, x=0, y=0, width = 1024, height = 600)
@@ -486,9 +587,9 @@ def system():
             f.close()
             file_open = False
             try:
-                picam2.stop_preview()
+                  picam2.stop_preview()
             except RuntimeError:
-                pass
+                  pass
             picam2.stop_recording()
             print("Stopped Camera...")
             powerstate = False
