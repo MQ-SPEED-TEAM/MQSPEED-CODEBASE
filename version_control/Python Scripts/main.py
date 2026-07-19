@@ -28,6 +28,7 @@ frame_counter = 0
 overlay_update_interval = 20  # Update overlay every 20 frames
 
 
+
 #Switch/Button GPIO Pins
 # (Pin IDs based on Pi5 GPIO PinOut)
 # Red = GPIO 1 (3V3 power)
@@ -59,6 +60,15 @@ def system():
     time.sleep(3)
     #////////////////////////////VARIABLES/////////////////////////////////////
     #//////////////////////////////////////////////////////////////////////////////
+    
+    
+    
+    #//////////////////////////WHEEL CIRCUMFERENCE CONSTANT/////////////////////////
+    #/////////////////////////////// OLD WHEELS -----> 1.434m /////////////////////
+    #//////////////////////////////  NEW WHEELS -----> 1.531m /////////////////////
+    WHEEL_CIRCUMFERENCE = 1.531
+    #WHEEL_CIRCUMFERENCE = 1.434
+    #///////////////////////////////////////////////////////////////////////////////
 
     t = 1800
     temp_speed = 0
@@ -122,7 +132,7 @@ def system():
 
     # Define overlay function
     # Overlay mode selection
-    overlay_mode = "standard"
+    overlay_mode = "analysis"
     # Text overlay settings
     
     def update_overlay_lines():
@@ -201,7 +211,7 @@ def system():
 
 
     power_profile = [
-        (500, 4),
+        (500, 100),
         (1000, 300),
         (1500, 400),
         (2000, 250),
@@ -260,7 +270,7 @@ def system():
             
 
             bar_max_power = 1000
-            actual_power = max(0, sensor_data_processor.g)
+            actual_power = max(0, sensor_data_processor.ph)
             target_power = max(1, get_power_target(sensor_data_processor.dt))
             bar_scale_max = target_power * 2.2
             fill_ratio = min(actual_power / bar_scale_max, 1.0)
@@ -470,7 +480,7 @@ def system():
         
         #Other calculations
         #total speed in kph
-        sensor_data_processor.ts = round((float(sensor_data_processor.c)*1.434866)*(60/1000),5)
+        sensor_data_processor.ts = round((float(sensor_data_processor.c) *1.434)*(60/1000),5)
         
         # Read from pedal if pipe is available
         if conn1.poll():
@@ -513,7 +523,7 @@ def system():
             video_filename = BASE_PATH + 'VIDEO/Vid_ ' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.h264'
             print("Starting Camera back up")
             update_overlay_lines()
-            picam2.start_preview(Preview.QTGL, x=0, y=0, width = 1024, height = 600)
+            picam2.start_preview(Preview.QTGL, x=0, y=0, width=1024, height=600)
             picam2.start()
             # picam2.start_preview(Preview.QTGL, x=0, y=0, width = 1024, height = 600)
             # wait to initialize camera

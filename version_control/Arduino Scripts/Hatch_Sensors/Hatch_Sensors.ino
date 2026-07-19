@@ -26,6 +26,12 @@ String pi_data; // Stores data received from Pi {white because declared but neve
 String command; // Stores commands received from transceiver
 #define GPSECHO true // overidden below?
 
+
+#define START_BYTE 0x02
+#define STOP_BYTE 0x03
+#define RX_BUFFER_SIZE 2048
+#define RADIO_DELAY_ms 500
+
 ////libraries stuff // Create IMU object with reset pin
 Adafruit_BNO08x bno08x(BNO08X_RST);
 sh2_SensorValue_t sensorValue; // Stores latest IMU sensor reading
@@ -70,6 +76,9 @@ float ax, ay, az; // IMU accelerometer variables (m/s²)
 float mx, my, mz; // IMU magnetometer variables (uTesla)
 float gx, gy, gz; // IMU gyroscope/angular velocity variables (rad/s)
 
+unsigned long lastIMUUpdate = 0;
+const unsigned long IMU_TIMEOUT_MS = 1000;
+
 ///////////////////////////////////////////////////AIR QUALITY//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -84,7 +93,7 @@ unsigned long lastRead=0; // Timestamp of last BME680 reading
 
 const int set_A = 33;           //transciever m1
 const int set_B = 32;           //transciever m0
-// const int aux = 33;             //transciever aux
+const int aux = 25;             //transciever aux
 #define LED 2                   //ESP led pin
 #define pi_bat 27               // Analog pin monitors Pi battery 
 #define backup_bat 26           // Analog pin monitors backup screen battery
@@ -114,8 +123,9 @@ void setup() {
   
   pinMode(set_A, OUTPUT); // Configure transceiver and sensor pins
   pinMode(set_B, OUTPUT);
+  pinMode(aux, INPUT);
   pinMode(LED,OUTPUT);
-  // pinMode(aux, INPUT);
+  
   pinMode(backup_bat, INPUT);
   pinMode(pi_bat, INPUT);
   
@@ -134,8 +144,8 @@ void setup() {
 
 
    uint8_t rslt = 1;
-   while(!Serial); 
-   delay(400);
+   //while(!Serial); 
+   delay(1000);
    rslt = bme.begin(); // Initialize BME680 sensor
    //Serial.println("BME WORKING");
    bme.startConvert(); // Begin sensor conversion
@@ -144,7 +154,7 @@ void setup() {
   
 //////////IMU SETUP////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   Wire.begin(SDA_PIN, SCL_PIN); // Start I2C on specified SDA and SCL pins
-  Wire.setClock(100000); // Set I2C speed to 100kHz - BNO08X supports 400kHz
+  Wire.setClock(400000); // Set I2C speed to 100kHz - BNO08X supports 400kHz
   delay(500);
 
   if (!bno08x.begin_I2C()) { // Try connect to IMU
@@ -154,17 +164,17 @@ void setup() {
   delay(300);
   
   // BNO08X reports many types of sensor data (quaternions, Euler angles, accelerometer, gyroscope, magnetometer, etc.) this enables specific reports we want to receive from the IMU. Read in loop().
- if (!bno08x.enableReport(SH2_ROTATION_VECTOR, 10000)) {
+ if (!bno08x.enableReport(SH2_ROTATION_VECTOR, 20000)) {
     Serial.println("Failed to enable rotation vector");
 }
 //  // ADD THESE BELOW:
-  if (!bno08x.enableReport(SH2_ACCELEROMETER, 10000)) {
+  if (!bno08x.enableReport(SH2_ACCELEROMETER, 20000)) {
     Serial.println("Failed to enable accelerometer");
   }
-  if (!bno08x.enableReport(SH2_MAGNETIC_FIELD_CALIBRATED, 10000)) {
+  if (!bno08x.enableReport(SH2_MAGNETIC_FIELD_CALIBRATED, 50000)) {
     Serial.println("Failed to enable magnetometer");
   }
-  if (!bno08x.enableReport(SH2_GYROSCOPE_CALIBRATED, 10000)) {
+  if (!bno08x.enableReport(SH2_GYROSCOPE_CALIBRATED, 20000)) {
     Serial.println("Failed to enable gyroscope");
   }
 
@@ -183,9 +193,16 @@ void loop() {
    battery_analog_read.addValue(analogRead(backup_bat));
 
     // Calculate roll pitch yaw
+
+
+    while (bno08x.getSensorEvent(&sensorValue))  {
+  
     
-    if (bno08x.getSensorEvent(&sensorValue)) {
+    
+    
     if (sensorValue.sensorId == SH2_ROTATION_VECTOR) {
+      lastIMUUpdate = millis();
+      
       qw = sensorValue.un.rotationVector.real;
       qx = sensorValue.un.rotationVector.i;
       qy = sensorValue.un.rotationVector.j;
@@ -252,6 +269,24 @@ void loop() {
         gz = sensorValue.un.gyroscope.z;
     }
     }
+
+
+
+
+        
+
+    if (millis() - lastIMUUpdate > IMU_TIMEOUT_MS) {
+        Serial.println("******** IMU TIMEOUT ********");
+        lastIMUUpdate = millis();
+    }
+
+ 
+
+    
+
+
+    
+   
  
     // Calculate BME data
      if(millis()-lastRead>1000){ // Read BME680 data every 1 second/1000ms
@@ -355,7 +390,7 @@ void loop() {
    else{Serial.print("0n,0e,0,0,0");}
    
    Serial.print("0\n");
-   Serial.flush();
+   
 
 
    /// Receieve from pi and send to transceiver
@@ -369,13 +404,14 @@ void loop() {
         }
       }
     if (Serial.available()>0 && !Serial2.available()>0) {
-    pi_data = Serial.readStringUntil('\n');
-    pi_data.trim();
-
-    Serial2.write(0x02);          // STX
-    Serial2.print(pi_data);       // Payload
-    Serial2.write(0x03);          // ETX
-    Serial2.flush();
+      pi_data = Serial.readStringUntil('\n');
+      pi_data.trim();
+      if (digitalRead(aux)) {
+        Serial2.write(0x02);          // STX
+        Serial2.print(pi_data);       // Payload
+        Serial2.write(0x03);          // ETX
+        Serial2.flush();
+      }
     }
   }
 }

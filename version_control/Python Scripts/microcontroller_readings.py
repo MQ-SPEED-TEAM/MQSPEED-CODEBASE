@@ -394,7 +394,7 @@ class SensorDataProcessor:
         # Declare list of dict keys
         esp_bike_dictkeys = ["c","l","r","s","cr","sa"]
         esp_gear_dictkeys = ["g","bg"]
-        esp_hatch_dictkeys = ["rl","ph","yw","t","h","p","bp","ba","la","lo","gs","al","sn"]
+        esp_hatch_dictkeys = ["rl","ph","yw","ax","ay","az","mx","my","mz","gx","gy","gz","qw","qx","qy","qz","t","h","p","bp","ba","la","lo","gs","al","sn"]
         cal_data_dict = {"ts":self.ts, "dt":self.dt, "pr":self.pr, "cd":self.cd, "tq":self.tq}
         
         # Match list of dict keys to serial port list of data points
