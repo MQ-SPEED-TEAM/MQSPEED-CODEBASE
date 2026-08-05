@@ -75,9 +75,9 @@ float qw, qx, qy, qz; // IMU quaternion variables
 float ax, ay, az; // IMU accelerometer variables (m/s²)
 float mx, my, mz; // IMU magnetometer variables (uTesla)
 float gx, gy, gz; // IMU gyroscope/angular velocity variables (rad/s)
+bool imuConnected = false;
 
-unsigned long lastIMUUpdate = 0;
-const unsigned long IMU_TIMEOUT_MS = 1000;
+
 
 ///////////////////////////////////////////////////AIR QUALITY//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -157,26 +157,39 @@ void setup() {
   Wire.setClock(400000); // Set I2C speed to 100kHz - BNO08X supports 400kHz
   delay(500);
 
-  if (!bno08x.begin_I2C()) { // Try connect to IMU
-    Serial.println("❌ BNO08X not detected!");
-    while (1) delay(10); // 
+  imuConnected = bno08x.begin_I2C();
+
+  if (!imuConnected) {
+   
+      Serial.println("WARNING: BNO08X not detected. Continuing without IMU.");
+      
+}   else {
+      delay(300);
+
+      if (!bno08x.enableReport(SH2_ROTATION_VECTOR, 20000)) {
+          Serial.println("Failed to enable rotation vector");
+      }
+
+      if (!bno08x.enableReport(SH2_ACCELEROMETER, 20000)) {
+          Serial.println("Failed to enable accelerometer");
+      }
+
+      if (!bno08x.enableReport(SH2_MAGNETIC_FIELD_CALIBRATED, 50000)) {
+          Serial.println("Failed to enable magnetometer");
+      }
+
+      if (!bno08x.enableReport(SH2_GYROSCOPE_CALIBRATED, 20000)) {
+          Serial.println("Failed to enable gyroscope");
+      }
   }
-  delay(300);
+
+  //delay(300);
   
   // BNO08X reports many types of sensor data (quaternions, Euler angles, accelerometer, gyroscope, magnetometer, etc.) this enables specific reports we want to receive from the IMU. Read in loop().
- if (!bno08x.enableReport(SH2_ROTATION_VECTOR, 20000)) {
-    Serial.println("Failed to enable rotation vector");
-}
-//  // ADD THESE BELOW:
-  if (!bno08x.enableReport(SH2_ACCELEROMETER, 20000)) {
-    Serial.println("Failed to enable accelerometer");
-  }
-  if (!bno08x.enableReport(SH2_MAGNETIC_FIELD_CALIBRATED, 50000)) {
-    Serial.println("Failed to enable magnetometer");
-  }
-  if (!bno08x.enableReport(SH2_GYROSCOPE_CALIBRATED, 20000)) {
-    Serial.println("Failed to enable gyroscope");
-  }
+ //if (!bno08x.enableReport(SH2_ROTATION_VECTOR, 20000)) {
+   // Serial.println("Failed to enable rotation vector");
+//}
+
 
 
 
@@ -188,6 +201,9 @@ float map_f(float x, float in_min, float in_max, float out_min, float out_max) {
 }
 
 
+
+
+
 void loop() {
    battery_pi_read.addValue(analogRead(pi_bat));
    battery_analog_read.addValue(analogRead(backup_bat));
@@ -195,13 +211,18 @@ void loop() {
     // Calculate roll pitch yaw
 
 
-    while (bno08x.getSensorEvent(&sensorValue))  {
+
+    
+
+if(imuConnected) {
+   while (bno08x.getSensorEvent(&sensorValue))  {
+     
   
     
     
     
     if (sensorValue.sensorId == SH2_ROTATION_VECTOR) {
-      lastIMUUpdate = millis();
+      
       
       qw = sensorValue.un.rotationVector.real;
       qx = sensorValue.un.rotationVector.i;
@@ -270,15 +291,14 @@ void loop() {
     }
     }
 
+}
+
 
 
 
         
 
-    if (millis() - lastIMUUpdate > IMU_TIMEOUT_MS) {
-        Serial.println("******** IMU TIMEOUT ********");
-        lastIMUUpdate = millis();
-    }
+    
 
  
 

@@ -60,7 +60,7 @@ def system():
     time.sleep(3)
     #////////////////////////////VARIABLES/////////////////////////////////////
     #//////////////////////////////////////////////////////////////////////////////
-    
+
     
     
     #//////////////////////////WHEEL CIRCUMFERENCE CONSTANT/////////////////////////
@@ -132,7 +132,7 @@ def system():
 
     # Define overlay function
     # Overlay mode selection
-    overlay_mode = "analysis"
+    overlay_mode = "standard"
     # Text overlay settings
     
     def update_overlay_lines():
@@ -480,7 +480,7 @@ def system():
         
         #Other calculations
         #total speed in kph
-        sensor_data_processor.ts = round((float(sensor_data_processor.c) *1.434)*(60/1000),5)
+        sensor_data_processor.ts = round((float(sensor_data_processor.c) *1.531)*(60/1000),5)
         
         # Read from pedal if pipe is available
         if conn1.poll():

@@ -438,7 +438,7 @@ Serial.print(RPM_SHAFT,2);
 Serial.print(",");
 Serial.print(RPM_CRANK,2);
 Serial.print(",");
-Serial.println(steering_angle+138.6);
+Serial.println(steering_angle+150.2);
 Serial.flush();
 
 print_time=print_now;
