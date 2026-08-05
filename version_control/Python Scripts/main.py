@@ -99,6 +99,22 @@ def system():
     ts_list = []
     display_ts = 0
     power_history = deque()
+
+    crank_teeth = 90 
+
+    cassette_teeth = {1: 32, 2: 28, 3: 25, 4: 22, 5: 20, 6: 17}
+
+    gear_ratio_tolerance = 0.06
+    gear_confirmation_count = 5
+    gear_match_count = 0 
+    last_selected_gear = 0
+    shift_confirmed = False
+
+
+
+
+
+    
     
 
      # setup function
@@ -469,6 +485,32 @@ def system():
     def moving_average(a, n):
         ret = sum(a)
         return ret/n
+
+
+    def verify_selected_gear(
+        crank_cadance_rpm,
+        cassete_rpm,
+        selected_gear
+
+    ):
+        if crank_cadance_rpm < 20 or cassette_rpm < 20:
+            return False, 0.0 
+
+
+        if commanded_gear not in cassette_teeth:
+            return False, 0.0
+
+        rear_teeth = cassette_teeth[selected_gear]
+
+        measured_ratio = cassette_rpm / crank_cadance_rpm
+        expected_ratio = crank_teeth / rear_teeth
+
+        error = abs(measured_ratio - expected_ratio) / expected_ratio
+
+        return error <= gear_ratio_tolerance, error * 100
+            
+
+    
     
 
         
@@ -561,6 +603,36 @@ def system():
                    run_once = False
                 
                 data_stream = sensor_data_processor.process()
+                
+                crank_cadence_rpm = float(sensor_data_processor.cr)
+
+                # Replace .cassette_rpm with the real cassette Hall RPM variable
+                cassette_rpm = float(sensor_data_processor.cassette_rpm)
+
+                commanded_gear = int(round(sensor_data_processor.g))
+
+                if commanded_gear != last_commanded_gear:
+                    gear_match_count = 0
+                    shift_confirmed = False
+                    last_commanded_gear = commanded_gear
+
+                ratio_matches, gear_error_percent = verify_selected_gear(
+                    crank_cadence_rpm,
+                    cassette_rpm,
+                    selected_gear
+                    )
+                    
+
+                if ratio_matches:
+                    gear_match_count += 1
+
+                    if gear_match_count >= gear_confirmation_count:
+                        shift_confirmed = True
+                else:
+                    gear_match_count = 0
+                    shift_confirmed = False
+
+                
                 data_stream.insert(0, str(datetime.now().strftime('%H_%M_%S_%f'))[:-3])
                 
                 writer.writerow(data_stream)
