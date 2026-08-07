@@ -104,11 +104,20 @@ def system():
 
     cassette_teeth = {1: 32, 2: 28, 3: 25, 4: 22, 5: 20, 6: 17}
 
-    gear_ratio_tolerance = 0.06
+    gear_ratio_tolerance = 0.08
     gear_confirmation_count = 5
     gear_match_count = 0 
     last_selected_gear = 0
     shift_confirmed = False
+
+   
+
+    
+
+ 
+
+
+    
 
 
 
@@ -286,7 +295,7 @@ def system():
             
 
             bar_max_power = 1000
-            actual_power = max(0, sensor_data_processor.ph)
+            actual_power = max(0, sensor_data_processor.pr_avg)
             target_power = max(1, get_power_target(sensor_data_processor.dt))
             bar_scale_max = target_power * 2.2
             fill_ratio = min(actual_power / bar_scale_max, 1.0)
@@ -487,31 +496,35 @@ def system():
         return ret/n
 
 
-    def verify_selected_gear(
-        crank_cadance_rpm,
-        cassete_rpm,
-        selected_gear
-
-    ):
-        if crank_cadance_rpm < 20 or cassette_rpm < 20:
-            return False, 0.0 
-
-
-        if commanded_gear not in cassette_teeth:
-            return False, 0.0
-
-        rear_teeth = cassette_teeth[selected_gear]
-
-        measured_ratio = cassette_rpm / crank_cadance_rpm
-        expected_ratio = crank_teeth / rear_teeth
-
-        error = abs(measured_ratio - expected_ratio) / expected_ratio
-
-        return error <= gear_ratio_tolerance, error * 100
-            
-
+    def detect_actual_gear(crank_cadence_rpm, cassette_rpm):
     
-    
+  
+
+        # Avoid detecting gears when the drivetrain is barely moving.
+        if crank_cadence_rpm < 20 or cassette_rpm < 20:
+            return 0, 100.0
+
+        measured_ratio = cassette_rpm / crank_cadence_rpm
+
+        closest_gear = 0
+        smallest_error = float("inf")
+
+        for gear, rear_teeth in cassette_teeth.items():
+            expected_ratio = crank_teeth / rear_teeth
+
+            error = abs(measured_ratio - expected_ratio) / expected_ratio
+
+            if error < smallest_error:
+                smallest_error = error
+                closest_gear = gear
+
+        error_percent = smallest_error * 100
+
+    # Reject the result if it is not close enough to any known gear.
+        if smallest_error > gear_ratio_tolerance:
+            return 0, error_percent
+
+        return closest_gear, error_percent
 
         
 
@@ -606,32 +619,38 @@ def system():
                 
                 crank_cadence_rpm = float(sensor_data_processor.cr)
 
-                # Replace .cassette_rpm with the real cassette Hall RPM variable
-                cassette_rpm = float(sensor_data_processor.cassette_rpm)
+               
+                cassette_rpm = float(sensor_data_processor.s)
 
-                commanded_gear = int(round(sensor_data_processor.g))
+                detected_gear, gear_error_percent = detect_actual_gear(
+                    crank_cadence_rpm,
+                    cassette_rpm
+                )
+                selected_gear = int(round(sensor_data_processor.g))
 
-                if commanded_gear != last_commanded_gear:
+                if selected_gear != last_selected_gear:
+                    last_selected_gear = selected_gear
                     gear_match_count = 0
                     shift_confirmed = False
-                    last_commanded_gear = commanded_gear
 
-                ratio_matches, gear_error_percent = verify_selected_gear(
-                    crank_cadence_rpm,
-                    cassette_rpm,
-                    selected_gear
-                    )
-                    
-
-                if ratio_matches:
+                if detected_gear == selected_gear and detected_gear != 0:
                     gear_match_count += 1
 
                     if gear_match_count >= gear_confirmation_count:
                         shift_confirmed = True
+
+
                 else:
                     gear_match_count = 0
                     shift_confirmed = False
 
+
+                sensor_data_processor.detected_gear = detected_gear
+                sensor_data_processor.shift_confirmed = shift_confirmed
+                sensor_data_processor.gear_error_percent = gear_error_percent
+                
+
+              
                 
                 data_stream.insert(0, str(datetime.now().strftime('%H_%M_%S_%f'))[:-3])
                 
