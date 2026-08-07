@@ -188,6 +188,7 @@ def system():
 
             "analysis": [f"c: {sensor_data_processor.c}  l: {sensor_data_processor.l}  r: {sensor_data_processor.r}  "
                          f"cr: {sensor_data_processor.cr}  s: {sensor_data_processor.s}  ts: {sensor_data_processor.ts}  ",
+                         f"Detected Gear: {sensor_data_processor.detected_gear} Confirmed: {sensor_data_processor.shift_confirmed}  ",
                          f"sa: {sensor_data_processor.sa}  g: {sensor_data_processor.g}  bg: {sensor_data_processor.bg}",
                          f"rl: {sensor_data_processor.rl}  ph: {sensor_data_processor.ph}  yw: {sensor_data_processor.yw}",
                          f"ax: {sensor_data_processor.ax}  ay: {sensor_data_processor.ay}  az: {sensor_data_processor.az}",
