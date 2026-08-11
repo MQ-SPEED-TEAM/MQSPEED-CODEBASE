@@ -682,7 +682,7 @@ def system():
 
                 else:
                     gear_match_count = max(gear_match_count - 1, 0)
-                    if gear_match_count == 0
+                    if gear_match_count == 0:
                         shift_confirmed = False
 
 
