@@ -102,6 +102,11 @@ def system():
 
     crank_teeth = 90 
 
+    crank_rpm_history = deque(maxlen = 10)
+    cassette_rpm_history = deque(maxlen = 10)
+
+    
+
     cassette_teeth = {1: 32, 2: 28, 3: 25, 4: 22, 5: 20, 6: 17}
 
     gear_ratio_tolerance = 0.08
@@ -131,6 +136,8 @@ def system():
     sensor_data_processor.detected_gear = 0
     sensor_data_processor.shift_confirmed = False
     sensor_data_processor.gear_error_percent = 100.0
+    sensor_data_processor.cr_avg = 0      
+    sensor_data_processor.s_avg = 0
 
     # Boot auto porting on startup
     if ports_incomplete:
@@ -191,6 +198,7 @@ def system():
             "analysis": [f"c: {sensor_data_processor.c}  l: {sensor_data_processor.l}  r: {sensor_data_processor.r}  "
                          f"cr: {sensor_data_processor.cr}  s: {sensor_data_processor.s}  ts: {sensor_data_processor.ts}  ",
                          f"dg: {sensor_data_processor.detected_gear} sc: {sensor_data_processor.shift_confirmed}  ",
+                         f"cr_avg: {sensor_data_processor.cr_avg:.1f}  s_avg: {sensor_data_processor.s_avg:.1f}",
                          f"sa: {sensor_data_processor.sa}  g: {sensor_data_processor.g}  bg: {sensor_data_processor.bg}",
                          f"rl: {sensor_data_processor.rl}  ph: {sensor_data_processor.ph}  yw: {sensor_data_processor.yw}",
                          f"ax: {sensor_data_processor.ax}  ay: {sensor_data_processor.ay}  az: {sensor_data_processor.az}",
@@ -620,15 +628,40 @@ def system():
                 
                 data_stream = sensor_data_processor.process()
                 
-                crank_cadence_rpm = float(sensor_data_processor.cr)
+                # Raw RPM readings
+                crank_rpm_raw = float(sensor_data_processor.cr)
+                cassette_rpm_raw = float(sensor_data_processor.s)
 
-               
-                cassette_rpm = float(sensor_data_processor.s)
+                # Add readings to smoothing buffers
+                if crank_rpm_raw > 0:
+                    crank_rpm_history.append(crank_rpm_raw)
 
+                if cassette_rpm_raw > 0:
+                    cassette_rpm_history.append(cassette_rpm_raw)
+
+                # Average recent readings
+                if crank_rpm_history:
+                    crank_cadence_rpm = sum(crank_rpm_history) / len(crank_rpm_history)
+                else:
+                    crank_cadence_rpm = 0
+
+                if cassette_rpm_history:
+                    cassette_rpm = sum(cassette_rpm_history) / len(cassette_rpm_history)
+                else:
+                    cassette_rpm = 0
+
+                # Storing avg the rpm for the overlay
+                sensor_data_processor.cr_avg = crank_cadence_rpm
+                sensor_data_processor.s_avg = cassette_rpm
+
+                # Detect gear from smoothed RPM
                 detected_gear, gear_error_percent = detect_actual_gear(
-                    crank_cadence_rpm,
-                    cassette_rpm
+                crank_cadence_rpm,
+                cassette_rpm
                 )
+
+
+                
                 selected_gear = int(round(sensor_data_processor.g))
 
                 if selected_gear != last_selected_gear:
@@ -640,12 +673,14 @@ def system():
                     gear_match_count += 1
 
                     if gear_match_count >= gear_confirmation_count:
+                        gear_match_count = gear_confirmation_count
                         shift_confirmed = True
 
 
                 else:
-                    gear_match_count = 0
-                    shift_confirmed = False
+                    gear_match_count = max(gear_match_count - 1, 0)
+                    if gear_match_count == 0
+                        shift_confirmed = False
 
 
                 sensor_data_processor.detected_gear = detected_gear
