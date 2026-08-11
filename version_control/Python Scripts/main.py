@@ -590,6 +590,9 @@ def system():
             print("Starting Camera back up")
             update_overlay_lines()
             picam2.start_preview(Preview.QTGL, x=0, y=0, width=1024, height=600)
+            for window in QApplication.topLevelWidgets():
+            window.showFullScreen()
+
             picam2.start()
             # picam2.start_preview(Preview.QTGL, x=0, y=0, width = 1024, height = 600)
             # wait to initialize camera
