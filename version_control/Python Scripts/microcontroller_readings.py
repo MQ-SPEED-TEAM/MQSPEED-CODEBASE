@@ -23,17 +23,30 @@ class SensorDataProcessor:
         self.sa = 0			#Steering angle (degrees)
         self.g = 0			#Gear
         self.bg = 0			#gear battery (Volts)
-        self.ax = 0			#Accelerometer X (m/s^2)
-        self.ay = 0			#Accelerometer Y (m/s^2)
-        self.az = 0			#Accelerometer Z (m/s^2)
-        self.vx = 0			#Magnetometer X (degrees)
-        self.vy = 0			#Magnetometer Y (degrees)
-        self.vz = 0			#Magnetometer Z (degrees)
+        self.bgPr = 0       #gear battery percentage
+        self.rl = 0			#Roll
+        self.ph = 0			#Pitch
+        self.yw = 0			#Yaw
+        self.qw = 0    # Quaternion w (orientation)
+        self.qx = 0    # Quaternion x
+        self.qy = 0    # Quaternion y
+        self.qz = 0    # Quaternion z
+        self.ax = 0    # Acceleration X (m/s²)
+        self.ay = 0    # Acceleration Y (m/s²)
+        self.az = 0    # Acceleration Z (m/s²)
+        self.mx = 0    # Magnetometer X (uTesla)
+        self.my = 0    # Magnetometer Y (uTesla)
+        self.mz = 0    # Magnetometer Z (uTesla)
+        self.gx = 0    # Angular velocity X (rad/s)
+        self.gy = 0    # Angular velocity Y (rad/s)
+        self.gz = 0    # Angular velocity Z (rad/s)
         self.t = 0			#Temperature (C)
         self.p = 0			#Pressure (Pascals)
         self.h = 0			#Humidity (%)
         self.bp = 0			#Main battery (Volts)
         self.ba = 0			#Backup screen battery (Volts)
+        self.bpPr = 0       #Main battery percentage
+        self.baPr = 0       #Backup screen battery percentage
         self.dt = 0			#Distance travelled (meters)
         self.la = 0			#Latitude
         self.lo = 0			#Longitude
@@ -41,29 +54,31 @@ class SensorDataProcessor:
         self.al = 0			#Altitude (meters)
         self.sn = 0			#Satellite number
         self.pr = 0			#Power (Watts)
+        self.pr_avg = 0     #Average Power
         self.cd = 0			#Power pedals cadence (RPM)
-        
-        
+        self.tq = 0         #Power pedals torque (Nm)
+      
         self.df = 0
         self.last_log = 0
         self.active_ports = 0
 
         # Initialize expected data as a list for comparison in update_attributes function
-        self.expected_data = ["c","l","r","cr",
-                              "s","ts","sa","g","bg","ax",
-                              "ay","az","vx",
-                              "vy","vz","t","h",
-                              "p","bp","ba","la","lo","gs","al","sn","dt","pr", "cd"]
-        # Initialize port instances as class attribute
+        self.expected_data = ["c","l","r","cr","s","ts","sa","g","bg","bgPr",
+                            "rl","ph","yw","qw","qx","qy","qz","ax","ay","az","mx","my","mz","gx","gy","gz",
+                            "t","p","h","bp","ba","bpPr","baPr","dt","la","lo","gs","al","sn",
+                            "pr","cd", "tq"]   
         self.esphatch = 0
         self.espbike = 0
         self.espgear = 0
         self.defects = 0 # Variable for testing serial reading consistency when debugging
-        self.expected_ports = 3 # Sets the number of ports needed to be detected before check_port_complete function returns True
+        self.expected_ports = 3 # Sets the number of ports (1,2,3,4) needed to be detected before check_port_complete function returns True
         
         # legend in order : central wheel=c, left wheel=l, right wheel=r, crank=cr, shaft=s, total speed=ts, gear set=g,
         # steering angle=sa, acceleration x=ax, acceleration y=ay, acceleration z=az, angular velocity x=vx, angular velocity y=vy
         # angular velocity z=vz, temperature=t, humidity=h, air pressure=p, latitude=la, longitude=lo, distance to finish=df, distance traveled = dt
+        
+        self.gear_home_complete = False
+        self.gear_home_message_time = 0
     
     def bytestream_read(self, port=None, ending_line=b"\n"):
         """Takes serial port instance and ending byte as arguments. Returns list of decoded byte characters starting from
@@ -155,7 +170,7 @@ class SensorDataProcessor:
         if esp_1 != None:
             while current_array <= array_checks:
                 byte_read = esp_1.read()  # Read bytes from serial port
-                if byte_read: #if not empty
+                if byte_read: #if not empty b""
                     try:
                         byte_char = byte_read.decode()  # Decode bytes to string
                     except UnicodeDecodeError:
@@ -163,6 +178,7 @@ class SensorDataProcessor:
                         byte_read = None
                         print("UnicodeDecodeError averted")
                     byte_array_temp.append(byte_char) # Add decoded byte to temporary array
+                    
                     if byte_read == b"\n" and "h" in byte_array_temp:
                         print("hatch connected")
                         self.esphatch = esp_1
@@ -172,13 +188,16 @@ class SensorDataProcessor:
                     if byte_read == b"\n" and "g" in byte_array_temp:
                         print("gear connected")
                         self.espgear = esp_1
-                    if byte_read == b"\n":
+                    if byte_read == b"\n" or byte_read == b"":
                         byte_array_temp =[]
                         current_array += 1
                         try:
                             esp_1.reset_input_buffer()
                         except AttributeError:
                             esp_1 = None
+                else:
+                    break
+
                 
                 
         current_array = 0
@@ -202,13 +221,15 @@ class SensorDataProcessor:
                     if byte_read == b"\n" and "g" in byte_array_temp:
                         print("gear connected")
                         self.espgear = esp_2
-                    if byte_read == b"\n":
+                    if byte_read == b"\n" or byte_read == b"":
                         byte_array_temp =[]
                         current_array += 1
                         try:
                             esp_2.reset_input_buffer()
                         except AttributeError:
                             esp_2 = None
+                else:
+                    break
         
         current_array = 0
         if esp_3 != None:
@@ -231,13 +252,15 @@ class SensorDataProcessor:
                     if byte_read == b"\n" and "g" in byte_array_temp:
                         print("gear connected")
                         self.espgear = esp_3
-                    if byte_read == b"\n":
+                    if byte_read == b"\n" or byte_read == b"":
                         byte_array_temp =[]
                         current_array += 1
                         try:
                             esp_3.reset_input_buffer()
                         except AttributeError:
                             esp_3 = None
+                else:
+                    break
         
         current_array = 0
         if esp_4 != None:
@@ -260,13 +283,15 @@ class SensorDataProcessor:
                     if byte_read == b"\n" and "g" in byte_array_temp:
                         print("gear connected")
                         self.espgear = esp_4
-                    if byte_read == b"\n":
+                    if byte_read == b"\n" or byte_read == b"":
                         byte_array_temp =[]
                         current_array += 1
                         try:
                             esp_4.reset_input_buffer()
                         except AttributeError:
                             esp_4 = None
+                else:
+                    break
         
                             
         # Print port status            
@@ -372,8 +397,8 @@ class SensorDataProcessor:
         # Declare list of dict keys
         esp_bike_dictkeys = ["c","l","r","s","cr","sa"]
         esp_gear_dictkeys = ["g","bg"]
-        esp_hatch_dictkeys = ["ax","ay","az","vx","vy","vz","t","h", "p","bp","ba","la","lo","gs","al","sn"]
-        cal_data_dict = {"ts":self.ts, "dt":self.dt, "pr":self.pr, "cd":self.cd}
+        esp_hatch_dictkeys = ["rl","ph","yw","ax","ay","az","mx","my","mz","gx","gy","gz","qw","qx","qy","qz","t","h","p","bp","ba","la","lo","gs","al","sn"]
+        cal_data_dict = {"ts":self.ts, "dt":self.dt, "pr":self.pr, "cd":self.cd, "tq":self.tq, "bpPr":self.bpPr, "baPr":self.baPr, "bgPr":self.bgPr}
         
         # Match list of dict keys to serial port list of data points
         while True:
@@ -395,15 +420,32 @@ class SensorDataProcessor:
             else:
                 esp_gear_raw = esp_gear_raw[2:]
                 esp_gear_list = list(esp_gear_raw.split(","))
-                try:
-                    esp_gear_dict = {esp_gear_dictkeys[i]: float(esp_gear_list[i]) for i in range(len(esp_gear_dictkeys))}
-                    if esp_gear_dict["bg"] < 14.0:
-                        self.espgear = None
-                except IndexError: # Error likely due to battery analog reading flickering
-                    esp_gear_list.append('0')
-                    esp_gear_dict = {esp_gear_dictkeys[i]: float(esp_gear_list[i]) for i in range(len(esp_gear_dictkeys))}
-                except ValueError: #
-                    esp_gear_dict = {"g":0,"bg":0}
+                
+                #Check for homing message
+                if len(esp_gear_list) == 1 and esp_gear_list[0] == "H":
+                    print("Gear Homing Complete")
+                    self.gear_home_complete = True
+                    self.gear_home_message_time = time.time()
+                    
+                    
+                    
+                    esp_gear_dict = {"g": self.g, "bg": self.bg}
+                    
+                else:
+                    
+                
+                    try:
+                        esp_gear_dict = {esp_gear_dictkeys[i]: float(esp_gear_list[i]) for i in range(len(esp_gear_dictkeys))}
+                    
+                        #if esp_gear_dict["bg"] < 14.0:
+                            #self.espgear = None
+                    except IndexError: # Error likely due to battery analog reading flickering
+                        esp_gear_list.append('0')
+                    
+                        esp_gear_dict = {esp_gear_dictkeys[i]: float(esp_gear_list[i]) for i in range(len(esp_gear_dictkeys))}
+                    except ValueError: 
+                         esp_gear_dict = {"g":0,"bg":0}
+                         print("value error on gears")
             
             
             
@@ -420,7 +462,13 @@ class SensorDataProcessor:
                     try:
                         esp_hatch_dict[esp_hatch_dictkeys[i]] = float(esp_hatch_list[i])
                     except:
-                        esp_hatch_dict[esp_hatch_dictkeys[i]] = (esp_hatch_list[i])
+                        try:
+                            esp_hatch_dict[esp_hatch_dictkeys[i]] = (esp_hatch_list[i])
+                        except IndexError:
+                            print("Index Error at Hatch Dict Line 436")
+                            pass
+                            
+                            
                     
             
             
@@ -474,8 +522,22 @@ class SensorDataProcessor:
         current_data.pop("df")
         current_data.pop("active_ports")
         current_data.pop("expected_ports")
+        current_data.pop("gear_home_complete")
+        current_data.pop("gear_home_message_time")
             
         return list(current_data.values())
+    
+    def gear_correction(self, command):
+        try:
+                # UNCOMMENT OUT ONCE TRANSCIEVER WORKS
+            self.espgear.write(str.encode(command))
+            print(f"data sent: {current_data_line}")
+            
+        except AttributeError:
+            print(f"gear command not sent")
+        except OSError:
+            print(f"Gear ESP disconnected, transmit error")
+        
     
     def transmit(self):
         """This method transmits the current class atrributes as a byte stream to the hatch esp."""
@@ -492,6 +554,9 @@ class SensorDataProcessor:
         current_data.pop("df")
         current_data.pop("active_ports")
         current_data.pop("expected_ports")
+        current_data.pop("gear_home_complete")
+        current_data.pop("gear_home_message_time")
+
         
         # Format dictionary into byte stream
         current_data_line = str(list(current_data.values()))[1:-1]
@@ -527,7 +592,7 @@ class SensorDataProcessor:
         except OSError:
             print(f"Hatch ESP disconnected, transmit error")
 
-
+   
 
 
 
@@ -565,7 +630,6 @@ class SensorDataProcessor:
 
 # while True:
 #     sensor_processor.raw_read()
-
 
 
 
